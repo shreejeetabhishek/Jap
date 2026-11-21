@@ -1,0 +1,9 @@
+{
+  "name": "Divya Jap — Digital Mala Counter",
+  "short_name": "Divya Jap",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#140c07",
+  "theme_color": "#140c07",
+  "description": "A digital mala counter for Naam Jap, Mantra Jap and Chalisa Path."
+}
