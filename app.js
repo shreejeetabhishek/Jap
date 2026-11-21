@@ -1,179 +1,1455 @@
-(() => {
-  "use strict";
-  const $ = (s) => document.querySelector(s);
-  const canvas = $("#malaCanvas"), ctx = canvas.getContext("2d", { alpha: true });
-  const stage = $("#malaStage");
-  const state = { count: 0, target: 108, material: "rudraksha", sound: true, chant: {type:"NAAM JAP",title:"RAM",subtitle:"श्री राम जय राम जय जय राम"}, theme:"dark", sway:0, phase:0 };
-  const chants = {
-    naam: [
-      ["RAM","श्री राम जय राम जय जय राम"],["HARI","हरि बोल • ॐ नमो भगवते वासुदेवाय"],
-      ["SHIVA","ॐ नमः शिवाय • हर हर महादेव"],["GOVIND","श्री कृष्ण गोविन्द हरे मुरारे"],
-      ["RADHA","श्री राधे राधे"],["KRISHNA","हरे कृष्ण हरे राम"],
-      ["DURGA","ॐ ऐं ह्रीं क्लीं चामुण्डायै विच्चे"],["GANESH","ॐ गं गणपतये नमः"]
-    ],
-    mantra: [
-      ["GAYATRI MANTRA","ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि"],
-      ["MAHAMRITYUNJAYA","ॐ त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम्"],
-      ["HARE KRISHNA","हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे"],
-      ["OM NAMAH SHIVAYA","ॐ नमः शिवाय"]
-    ]
-  };
-  let W=1,H=1,DPR=1, lastY=null, toastTimer=0, audio=null;
+(function () {
+      /* ======================================================================
+         1. SACRED CHANT & TARGET CATALOG
+         ====================================================================== */
+      const DIVYA_DATA = {
+        naams: [
+          { id: "ram", title: "RAM", subtitle: "श्री राम जय राम जय जय राम" },
+          { id: "hari", title: "HARI", subtitle: "हरि बोल • ॐ नमो भगवते वासुदेवाय" },
+          { id: "shiva", title: "SHIVA", subtitle: "ॐ नमः शिवाय • हर हर महादेव" },
+          { id: "govind", title: "GOVIND", subtitle: "श्री कृष्ण गोविन्द हरे मुरारे" },
+          { id: "ishwar", title: "ISHWAR", subtitle: "ईश्वर सत्य है • ॐ तत् सत्" },
+          { id: "radha", title: "RADHA", subtitle: "श्री राधे राधे • राधा वल्लभ श्री हरिवंश" },
+          { id: "krishna", title: "KRISHNA", subtitle: "हरे कृष्ण हरे राम • कृष्णाय वासुदेवाय" },
+          { id: "durga", title: "DURGA", subtitle: "ॐ ऐं ह्रीं क्लीं चामुण्डायै विच्चे" }
+        ],
+        mantras: [
+          {
+            id: "gayatri",
+            title: "GAYATRI MANTRA",
+            subtitle: "ॐ भूर्भुवः स्वः तत्सवितुर्वरेण्यं भर्गो देवस्य धीमहि धियो यो नः प्रचोदयात्"
+          },
+          {
+            id: "mahamrityunjaya",
+            title: "MAHAMRITYUNJAYA",
+            subtitle: "ॐ त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम् उर्वारुकमिव बन्धनान्मृत्योर्मुक्षीय माऽमृतात्"
+          },
+          {
+            id: "hare_krishna",
+            title: "HARE KRISHNA MAHAMANTRA",
+            subtitle: "हरे कृष्ण हरे कृष्ण कृष्ण कृष्ण हरे हरे • हरे राम हरे राम राम राम हरे हरे"
+          },
+          {
+            id: "panchakshari",
+            title: "OM NAMAH SHIVAYA",
+            subtitle: "ॐ नमः शिवाय शान्ताय कारणत्रयहेतवे"
+          },
+          {
+            id: "ganesh",
+            title: "GANESH MANTRA",
+            subtitle: "ॐ गं गणपतये नमः • वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ"
+          }
+        ],
+        chalisas: [
+          {
+            id: "hanuman_chalisa",
+            title: "HANUMAN CHALISA",
+            subtitle: "श्रीगुरु चरन सरोज रज निज मनु मुकुरु सुधारि",
+            verses: [
+              "दोहा: श्रीगुरु चरन सरोज रज निज मनु मुकुरु सुधारि । बरनउँ रघुबर बिमल जसु जो दायकु फल चारि ॥",
+              "बुद्धिहीन तनु जानिके सुमिरौं पवन-कुमार । बल बुधि बिद्या देहु मोहिं हरहु कलेस बिकार ॥",
+              "चौपाई 1: जय हनुमान ज्ञान गुन सागर । जय कपीस तिहुँ लोक उजागर ॥",
+              "चौपाई 2: राम दूत अतुलित बल धामा । अञ्जनि-पुत्र पवनसुत नामा ॥",
+              "चौपाई 3: महाबीर बिक्रम बजरङ्गी । कुमति निवार सुमति के सङ्गी ॥",
+              "चौपाई 4: कञ्चन बरन बिराज सुबेसा । कानन कुण्डल कुञ्चित केसा ॥",
+              "चौपाई 5: हाथ बज्र औ ध्वजा बिराजै । काँधे मूँज जनेऊ साजै ॥",
+              "चौपाई 6: सङ्कर सुवन केसरीनन्दन । तेज प्रताप महा जग बन्दन ॥",
+              "चौपाई 7: बिद्यावान गुनी अति चातुर । राम काज करिबे को आतुर ॥",
+              "चौपाई 8: प्रभु चरित्र सुनिबे को रसिया । राम लखन सीता मन बसिया ॥",
+              "चौपाई 9: सूक्ष्म रूप धरि सियहिं दिखावा । बिकट रूप धरि लङ्क जरावा ॥",
+              "चौपाई 10: भीम रूप धरि असुर सँहारे । रामचन्द्र के काज सँवारे ॥",
+              "चौपाई 11: लाय सजीवन लखन जियाये । श्रीरघुबीर हरषि उर लाये ॥",
+              "चौपाई 12: रघुपति कीन्ही बहुत बड़ाई । तुम मम प्रिय भरतहि सम भाई ॥",
+              "चौपाई 13: सहस बदन तुम्हरो जस गावैं । अस कहि श्रीपति कण्ठ लगावैं ॥",
+              "चौपाई 14: सनकादिक ब्रह्मादि मुनीसा । नारद सारद सहित अहीसा ॥",
+              "चौपाई 15: जम कुबेर दिगपाल जहाँ ते । कबि कोबिद कहि सके कहाँ ते ॥",
+              "चौपाई 16: तुम उपकार सुग्रीवहिं कीन्हा । राम मिलाय राज पद दीन्हा ॥",
+              "चौपाई 17: तुम्हरो मन्त्र बिभीषन माना । लङ्केस्वर भए सब जग जाना ॥",
+              "चौपाई 18: जुग सहस्र जोजन पर भानू । लील्यो ताहि मधुर फल जानू ॥",
+              "चौपाई 19: प्रभु मुद्रिका मेलि मुख माहीं । जलधि लाँघि गये अचरज नाहीं ॥",
+              "चौपाई 20: दुर्गम काज जगत के जेते । सुगम अनुग्रह तुम्हरे तेते ॥",
+              "चौपाई 21: राम दुआरे तुम रखवारे । होत न आज्ञा बिनु पैसारे ॥",
+              "चौपाई 22: सब सुख लहै तुम्हारी सरना । तुम रच्छक काहू को डर ना ॥",
+              "चौपाई 23: आपन तेज सम्हारो आपै । तीनों लोक हाँक तें काँपै ॥",
+              "चौपाई 24: भूत पिसाच निकट नहिं आवै । महाबीर जब नाम सुनावै ॥",
+              "चौपाई 25: नासै रोग हरै सब पीरा । जपत निरन्तर हनुमत बीरा ॥",
+              "चौपाई 26: सङ्कट तें हनुमान छुड़ावै । मन क्रम बचन ध्यान जो लावै ॥",
+              "चौपाई 27: सब पर राम तपस्वी राजा । तिन के काज सकल तुम साजा ॥",
+              "चौपाई 28: और मनोरथ जो कोई लावै । सोइ अमित जीवन फल पावै ॥",
+              "चौपाई 29: चारों जुग परताप तुम्हारा । है परसिद्ध जगत उजियारा ॥",
+              "चौपाई 30: साधु-सन्त के तुम रखवारे । असुर निकन्दन राम दुलारे ॥",
+              "चौपाई 31: अष्ट सिद्धि नौ निधि के दाता । अस बर दीन जानकी माता ॥",
+              "चौपाई 32: राम रसायन तुम्हरे पासा । सदा रहो रघुपति के दासा ॥",
+              "चौपाई 33: तुम्हरे भजन राम को पावै । जनम-जनम के दुख बिसरावै ॥",
+              "चौपाई 34: अन्तकाल रघुबर पुर जाई । जहाँ जन्म हरि-भक्त कहाई ॥",
+              "चौपाई 35: और देवता चित्त न धरई । हनुमत सेइ सर्ब सुख करई ॥",
+              "चौपाई 36: सङ्कट कटै मिटै सब पीरा । जो सुमिरै हनुमत बलबीरा ॥",
+              "चौपाई 37: जै जै जै हनुमान गोसाईं । कृपा करहु गुरुदेव की नाईं ॥",
+              "चौपाई 38: जो सत बार पाठ कर कोई । छूटहि बन्दि महा सुख होई ॥",
+              "चौपाई 39: जो यह पढ़ै हनुमान चालीसा । होय सिद्धि साखी गौरीसा ॥",
+              "चौपाई 40: तुलसीदास सदा हरि चेरा । कीजै नाथ हृदय मँह डेरा ॥",
+              "दोहा: पवनतनय सङ्कट हरन मङ्गल मूरति रूप । राम लखन सीता सहित हृदय बसहु सुर भूप ॥"
+            ]
+          },
+          {
+            id: "shiv_chalisa",
+            title: "SHIV CHALISA",
+            subtitle: "जय गणेश गिरिजा सुवन मङ्गल मूल सुजान",
+            verses: [
+              "दोहा: जय गणेश गिरिजा सुवन मङ्गल मूल सुजान । कहत अयोध्यादास तुम देहु अभय वरदान ॥",
+              "जय गिरिजा पति दीन दयाला । सदा करत सन्तन प्रतिपाला ॥",
+              "भाल चन्द्रमा सोहत नीके । कानन कुण्डल नागफनी के ॥",
+              "अङ्ग गौर शिर गङ्ग बहाये । मुण्डमाल तन क्षार लगाए ॥",
+              "वस्त्र खाल बाघम्बर सोहे । छवि को देखि नाग मन मोहे ॥",
+              "ॐ नमः शिवाय • हर हर महादेव शम्भो काशी विश्वनाथ गङ्गे ॥"
+            ]
+          },
+          {
+            id: "durga_chalisa",
+            title: "DURGA CHALISA",
+            subtitle: "नमो नमो दुर्गे सुख करनी नमो नमो दुर्गे दुःख हरनी",
+            verses: [
+              "नमो नमो दुर्गे सुख करनी । नमो नमो दुर्गे दुःख हरनी ॥",
+              "निरङ्कार है ज्योति तुम्हारी । तिहूँ लोक फैली उजियारी ॥",
+              "शशि ललाट मुख महाविशाला । नेत्र लाल भृकुटि विकराला ॥",
+              "रूप मातु को अधिक सुहावे । दरश करत जन अति सुख पावे ॥",
+              "जय अम्बे गौरी मैया जय श्यामा गौरी ॥"
+            ]
+          }
+        ],
+        targetPresets: [3, 5, 7, 8, 9, 11, 13, 108, 1008]
+      };
 
-  function resize(){
-    const r=stage.getBoundingClientRect(); W=Math.max(1,r.width); H=Math.max(1,r.height); DPR=Math.min(devicePixelRatio||1,2);
-    canvas.width=Math.round(W*DPR); canvas.height=Math.round(H*DPR);
-    ctx.setTransform(DPR,0,0,DPR,0,0); draw();
-  }
-  const rand=(seed)=>{let x=Math.sin(seed*127.1+311.7)*43758.5453;return x-Math.floor(x)};
-  function palette(){
-    return ({
-      rudraksha:["#261006","#71351a","#b16b36","#d19458","#170903"],
-      tulsi:["#51371f","#9a7143","#c7a16d","#e2c394","#302014"],
-      chandan:["#74451f","#b77a3c","#dfad68","#f0ce94","#482a13"],
-      sphatik:["#718b99","#b8d0d9","#edf8fa","#ffffff","#4e626e"]
-    })[state.material];
-  }
-  function pathSeed(c,x,y,rx,ry,seed){
-    c.beginPath();
-    for(let i=0;i<=100;i++){
-      const a=i/100*Math.PI*2;
-      const wob=1+.055*Math.sin(5*a+seed)+.028*Math.sin(9*a+seed*1.7)+.015*Math.sin(13*a+seed*.5);
-      const px=x+Math.cos(a)*rx*wob, py=y+Math.sin(a)*ry*(1+.035*Math.sin(7*a+seed))*wob;
-      if(i===0)c.moveTo(px,py);else c.lineTo(px,py);
-    } c.closePath();
-  }
-  function drawRudraksha(c,x,y,rx,ry,seed,scale=1){
-    c.save(); c.translate(x,y);
-    const p=palette();
-    // A seed-shaped, irregular silhouette rather than a smooth sphere.
-    pathSeed(c,0,0,rx,ry,seed);
-    c.shadowColor="rgba(0,0,0,.62)";c.shadowBlur=rx*.24;c.shadowOffsetY=ry*.14;
-    const base=c.createRadialGradient(-rx*.34,-ry*.42,rx*.03,rx*.08,ry*.13,rx*1.2);
-    base.addColorStop(0,p[3]);base.addColorStop(.28,p[2]);base.addColorStop(.68,p[1]);base.addColorStop(1,p[4]);
-    c.fillStyle=base;c.fill();c.shadowColor="transparent";
-    c.save();pathSeed(c,0,0,rx,ry,seed);c.clip();
-    // Five deeply recessed, curved Mukhi channels with unequal wandering.
-    for(let k=0;k<5;k++){
-      const a=k*Math.PI*2/5-Math.PI/2 + .03*Math.sin(seed+k);
-      c.save();c.translate(Math.cos(a)*rx*.035,Math.sin(a)*ry*.035);c.rotate(a+Math.PI/2);
-      const drift=Math.sin(seed+k*1.91)*rx*.09;
-      c.beginPath();c.moveTo(drift-rx*.02,-ry*.98);
-      c.bezierCurveTo(-rx*.37+drift,-ry*.58,rx*.27+drift,-ry*.18,-rx*.16+drift,ry*.18);
-      c.bezierCurveTo(-rx*.37+drift,ry*.47,-rx*.04+drift,ry*.76,rx*.08+drift,ry*.99);
-      c.lineCap="round";c.lineJoin="round";
-      c.strokeStyle="rgba(15,5,2,.92)";c.lineWidth=rx*.115;c.stroke();
-      c.strokeStyle="rgba(5,2,1,.55)";c.lineWidth=rx*.055;c.stroke();
-      c.beginPath();c.moveTo(drift-rx*.065,-ry*.85);c.bezierCurveTo(-rx*.23+drift,-ry*.35,rx*.17+drift,ry*.05,-rx*.07+drift,ry*.77);
-      c.strokeStyle="rgba(220,151,91,.48)";c.lineWidth=rx*.025;c.stroke();
-      c.restore();
-    }
-    // Irregular raised nodules and shallow pits distributed across the lobes.
-    for(let i=0;i<Math.floor(rx*1.55);i++){
-      const a=rand(seed*17+i*3.1)*Math.PI*2, rr=.16+rand(seed*9+i*7.7)*.73;
-      const px=Math.cos(a)*rx*rr, py=Math.sin(a)*ry*rr;
-      const r=rx*(.018+rand(seed+i*2.3)*.034);
-      c.beginPath();c.ellipse(px,py,r,r*.72,a,0,Math.PI*2);
-      c.fillStyle=i%3===0?"rgba(13,5,2,.34)":"rgba(232,170,107,.18)";c.fill();
-      if(i%4===0){c.beginPath();c.arc(px-r*.3,py-r*.4,r*.55,0,Math.PI*2);c.fillStyle="rgba(8,3,1,.28)";c.fill();}
-    }
-    // Small dark threading bore at the top-facing center.
-    c.beginPath();c.ellipse(0,-ry*.035,rx*.09,ry*.058,0,0,Math.PI*2);c.fillStyle="#100602";c.fill();
-    c.beginPath();c.ellipse(-rx*.02,-ry*.055,rx*.034,ry*.019,0,0,Math.PI*2);c.fillStyle="rgba(229,169,108,.24)";c.fill();
-    c.restore();
-    // warm edge light gives the seed volume without a plastic gloss
-    c.beginPath();c.ellipse(-rx*.24,-ry*.36,rx*.25,ry*.09,-.7,0,Math.PI*2);c.fillStyle="rgba(255,216,168,.13)";c.fill();
-    c.restore();
-  }
-  function drawOther(c,x,y,rx,ry,seed){
-    c.save();c.translate(x,y);const p=palette();
-    const g=c.createRadialGradient(-rx*.3,-ry*.4,1,0,0,rx*1.2);
-    g.addColorStop(0,p[3]);g.addColorStop(.5,p[2]);g.addColorStop(1,p[4]);
-    c.beginPath();c.ellipse(0,0,rx*(.95+rand(seed)*.1),ry*(.96+rand(seed+1)*.08),.04*Math.sin(seed),0,Math.PI*2);
-    c.fillStyle=g;c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=rx*.2;c.shadowOffsetY=ry*.12;c.fill();c.shadowColor="transparent";
-    if(state.material==="sphatik"){c.strokeStyle="rgba(255,255,255,.7)";c.lineWidth=rx*.045;c.stroke();c.beginPath();c.ellipse(-rx*.25,-ry*.27,rx*.24,ry*.11,-.6,0,Math.PI*2);c.fillStyle="rgba(255,255,255,.5)";c.fill();}
-    else for(let i=0;i<rx*.8;i++){const a=rand(seed+i)*Math.PI*2;c.beginPath();c.arc(Math.cos(a)*rx*.5,Math.sin(a)*ry*.5,rx*.022,0,Math.PI*2);c.fillStyle="rgba(35,17,7,.22)";c.fill();}
-    c.restore();
-  }
-  function draw(){
-    if(!ctx)return;ctx.clearRect(0,0,W,H);
-    const count=state.target, top=Math.max(30,H*.045), bottom=H*.91, span=bottom-top;
-    const beadH=Math.min(span/(count+1)*.83,W*.19,27), beadW=beadH*.86, cx=W*.5;
-    // Single hanging thread behind the beads.
-    ctx.save();ctx.beginPath();ctx.moveTo(cx,top-beadH*1.4);ctx.bezierCurveTo(cx+state.sway*4,H*.27,cx-state.sway*3,H*.68,cx,bottom+beadH*.3);
-    ctx.strokeStyle="rgba(184,135,78,.82)";ctx.lineWidth=Math.max(1.1,W*.0035);ctx.stroke();ctx.restore();
-    for(let i=0;i<count;i++){
-      const t=(i+.5)/count, y=top+t*span;
-      const x=cx+Math.sin(t*Math.PI*1.9)*W*.008+state.sway*Math.sin(t*Math.PI)*W*.007;
-      const active=i<state.count, seed=i+41;
-      ctx.save();if(active){ctx.shadowColor="rgba(239,173,91,.65)";ctx.shadowBlur=beadH*.45;}
-      if(state.material==="rudraksha")drawRudraksha(ctx,x,y,beadW*.5,beadH*.48,seed);
-      else drawOther(ctx,x,y,beadW*.5,beadH*.48,seed);
-      ctx.restore();
-    }
-    // Guru / Sumeru bead, a little larger, and its attached cotton tassel.
-    const gy=top-beadH*1.55;
-    drawRudraksha(ctx,cx,gy,beadW*.68,beadH*.66,901);
-    ctx.save();ctx.strokeStyle="rgba(197,148,88,.88)";ctx.lineWidth=Math.max(1,W*.003);
-    for(let i=-4;i<=4;i++){ctx.beginPath();ctx.moveTo(cx+i*1.6,gy+beadH*.56);ctx.quadraticCurveTo(cx+i*3.2,gy+beadH*1.22,cx+i*2.8,gy+beadH*1.9);ctx.stroke();}
-    ctx.restore();
-  }
-  function updateUI(){
-    $("#countDisplay").textContent=state.count;$("#targetDisplay").textContent=state.target;
-    $("#malas").textContent=Math.floor(state.count/state.target);$("#total").textContent=state.count;
-    $("#progressFill").style.width=(state.count/state.target*100)+"%";
-    $("#gestureHint").style.opacity=state.count>=state.target?".25":".9";
-  }
-  function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),1500);}
-  function clickSound(){
-    if(!state.sound)return;
-    try{audio ||= new (window.AudioContext||window.webkitAudioContext)();if(audio.state==="suspended")audio.resume();
-      const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime;
-      o.type="triangle";o.frequency.setValueAtTime(state.material==="sphatik"?900:390,t);o.frequency.exponentialRampToValueAtTime(170,t+.055);
-      g.gain.setValueAtTime(.001,t);g.gain.linearRampToValueAtTime(.12,t+.004);g.gain.exponentialRampToValueAtTime(.001,t+.07);
-      o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+.08);
-    }catch(e){}
-  }
-  function advance(){
-    if(state.count>=state.target){toast("Mala complete — begin another round");return;}
-    state.count++;state.sway+=.11;clickSound();updateUI();draw();
-    if(state.count===state.target)toast("Mala complete • शुभ जप");
-    try{localStorage.setItem("divya-jap-state",JSON.stringify({count:state.count,target:state.target,material:state.material,chant:state.chant,theme:state.theme}));}catch(e){}
-  }
-  function restore(){
-    try{const s=JSON.parse(localStorage.getItem("divya-jap-state")||"null");if(!s)return;
-      if(Number.isInteger(s.target)&&s.target>0&&s.target<=1008)state.target=s.target;
-      if(Number.isInteger(s.count))state.count=Math.max(0,Math.min(s.count,state.target));
-      if(["rudraksha","tulsi","sphatik","chandan"].includes(s.material))state.material=s.material;
-      if(s.chant&&s.chant.title)state.chant=s.chant;
-      if(s.theme==="light")state.theme="light";
-    }catch(e){}
-  }
-  function persist(){try{localStorage.setItem("divya-jap-state",JSON.stringify({count:state.count,target:state.target,material:state.material,chant:state.chant,theme:state.theme}));}catch(e){}}
-  function applyChant(c){state.chant={type:c.type,title:c.title,subtitle:c.subtitle};$("#chantType").textContent=c.type;$("#chantTitle").textContent=c.title;$("#chantSubtitle").textContent=c.subtitle;persist();}
-  function showChants(tab="naam"){
-    const list=$("#chantList"), custom=$("#customPanel");list.innerHTML="";
-    document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("active",b.dataset.tab===tab));
-    custom.classList.toggle("hidden",tab!=="custom");list.classList.toggle("hidden",tab==="custom");
-    (chants[tab]||[]).forEach(([title,subtitle])=>{const b=document.createElement("button");b.type="button";b.className="chant-choice";b.innerHTML=`<strong></strong><small></small>`;b.querySelector("strong").textContent=title;b.querySelector("small").textContent=subtitle;b.addEventListener("click",()=>{applyChant({type:tab==="naam"?"NAAM JAP":"MANTRA JAP",title,subtitle});$("#chantDialog").close();});list.appendChild(b);});
-  }
-  $("#chantOpen").addEventListener("click",()=>{showChants("naam");$("#chantDialog").showModal();});
-  document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>showChants(b.dataset.tab)));
-  $("#applyCustom").addEventListener("click",()=>{const title=$("#customName").value.trim(),subtitle=$("#customSubtitle").value.trim();if(!title){toast("Enter a chant name");return;}applyChant({type:"CUSTOM JAP",title:title.toUpperCase(),subtitle});$("#chantDialog").close();});
-  $("#targetOpen").addEventListener("click",()=>$("#targetDialog").showModal());
-  const presets=[27,54,108,216,1008];let selected=state.target;
-  function renderPresets(){const box=$("#presets");box.innerHTML="";presets.forEach(n=>{const b=document.createElement("button");b.type="button";b.className="preset"+(selected===n?" selected":"");b.textContent=n;b.addEventListener("click",()=>{selected=n;renderPresets();});box.appendChild(b);});}
-  $("#applyCount").addEventListener("click",()=>{const custom=Number($("#customCount").value);const n=custom>0?Math.min(1008,Math.floor(custom)):selected;if(!n){toast("Choose a bead count");return;}state.target=n;state.count=0;updateUI();draw();persist();$("#targetDialog").close();toast("Mala set to "+n+" beads");});
-  $("#reset").addEventListener("click",()=>{state.count=0;updateUI();draw();persist();toast("Current mala reset");});
-  $("#soundToggle").addEventListener("click",()=>{state.sound=!state.sound;$("#soundToggle").classList.toggle("muted",!state.sound);toast(state.sound?"Sound on":"Sound off");});
-  $("#themeToggle").addEventListener("click",()=>{state.theme=state.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=state.theme;persist();});
-  document.querySelectorAll(".material").forEach(b=>b.addEventListener("click",()=>{state.material=b.dataset.material;document.querySelectorAll(".material").forEach(x=>x.classList.toggle("active",x===b));draw();persist();}));
-  stage.addEventListener("pointerdown",e=>{lastY=e.clientY;stage.setPointerCapture?.(e.pointerId);});
-  stage.addEventListener("pointerup",e=>{if(lastY===null)return;const delta=lastY-e.clientY;lastY=null;if(delta>12||Math.abs(delta)<=12)advance();});
-  stage.addEventListener("pointercancel",()=>lastY=null);
-  window.addEventListener("resize",resize,{passive:true});
-  restore();document.documentElement.dataset.theme=state.theme;
-  applyChant(state.chant);document.querySelectorAll(".material").forEach(b=>b.classList.toggle("active",b.dataset.material===state.material));
-  selected=state.target;renderPresets();updateUI();resize();
-  let raf=0;function animate(){state.phase+=.01;state.sway*=.965;if(Math.abs(state.sway)<.001)state.sway=0;raf=requestAnimationFrame(animate);if(state.sway)draw();}animate();
-})();
+      /* ======================================================================
+         2. SYNTHESIZED WEB AUDIO ENGINE (BEAD CLICKS & SUMERU TEMPLE BELL)
+         ====================================================================== */
+      class SacredAudioEngine {
+        constructor() {
+          this.ctx = null;
+          this.enabled = true;
+        }
+
+        ensureContext() {
+          if (!this.enabled) return null;
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === "suspended") {
+            this.ctx.resume().catch(() => {});
+          }
+          return this.ctx;
+        }
+
+        playBeadClick(material = "rudraksha") {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const filter = ctx.createBiquadFilter();
+
+          const profiles = {
+            rudraksha: { freq: 410, endFreq: 165, type: "triangle", filterFreq: 950, dur: 0.055 },
+            tulsi: { freq: 540, endFreq: 220, type: "sine", filterFreq: 1300, dur: 0.045 },
+            sphatik: { freq: 1420, endFreq: 880, type: "sine", filterFreq: 2800, dur: 0.065 },
+            chandan: { freq: 470, endFreq: 190, type: "triangle", filterFreq: 1100, dur: 0.05 }
+          };
+
+          const p = profiles[material] || profiles.rudraksha;
+          osc.type = p.type;
+          osc.frequency.setValueAtTime(p.freq, now);
+          osc.frequency.exponentialRampToValueAtTime(p.endFreq, now + p.dur);
+
+          filter.type = "lowpass";
+          filter.frequency.setValueAtTime(p.filterFreq, now);
+
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.linearRampToValueAtTime(0.22, now + 0.005);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + p.dur);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(now);
+          osc.stop(now + p.dur + 0.01);
+        }
+
+        playSumeruBell() {
+          const ctx = this.ensureContext();
+          if (!ctx) return;
+
+          const now = ctx.currentTime;
+          const harmonics = [528, 1056, 1584, 2112];
+          harmonics.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(freq, now);
+
+            const amp = 0.16 / (idx + 1);
+            const decay = 1.9 - idx * 0.28;
+
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(amp, now + 0.015);
+            gain.gain.exponentialRampToValueAtTime(0.0008, now + decay);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + decay + 0.05);
+          });
+        }
+      }
+
+      const SacredAudio = new SacredAudioEngine();
+
+      /* ======================================================================
+         3. PHOTOREALISTIC FPV MALA RENDERER
+         - Photorealistic procedural micro-textures (bumpy organic 5-Mukhi Rudraksha
+           seeds with bumpy silhouettes & Brahma thread knots, warm grained Tulsi,
+           refractive faceted Sphatik crystal, and silky Chandan wood).
+         - Realistic Proportional Bead Sizing:
+           * The active center bead is only slightly larger (~1.25x) than the
+             immediate neighboring beads on the strand (not an oversized ball
+             dwarfing tiny dots), creating a cohesive, authentic garland scale.
+         - Natural Engraved / Embossed Counter Integration:
+           * Instead of a fake white-outlined digital sticker floating on top,
+             the count is rendered as subtle warm gold-leaf / carved-inlay
+             lettering following the spherical lighting and material surface.
+         ====================================================================== */
+      class FpvMalaRenderer {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.width = 360;
+          this.height = 560;
+          this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+          this.material = "rudraksha";
+          this.targetCount = 108;
+          this.currentCount = 0;
+
+          this.advanceOffset = 0;
+          this.targetAdvanceOffset = 0;
+          this.dragPull = 0;
+          this.swayAngle = 0;
+          this.swayVelocity = 0;
+          this.targetTiltX = 0;
+          this.tasselAngle = 0;
+          this.tasselVelocity = 0;
+
+          this.beadSprites = {};
+          this.buildAllBeadSprites();
+        }
+
+        resize() {
+          const rect = this.canvas.parentElement.getBoundingClientRect();
+          this.width = Math.max(280, rect.width || window.innerWidth || 360);
+          this.height = Math.max(360, rect.height || window.innerHeight * 0.65 || 520);
+          this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+          this.canvas.width = Math.round(this.width * this.dpr);
+          this.canvas.height = Math.round(this.height * this.dpr);
+          this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        }
+
+        buildAllBeadSprites() {
+          ["rudraksha", "tulsi", "sphatik", "chandan"].forEach((mat) => {
+            this.beadSprites[mat] = this.createBeadSprite(mat, 260);
+          });
+          // Replace only Rudraksha with a detailed, physically lit 3D seed render.
+          this.loadThreeDRudraksha();
+        }
+
+        loadThreeDRudraksha() {
+          const build = () => {
+            if (!window.THREE || this._threeDReady) return;
+            this._threeDReady = true;
+            try {
+              const THREE = window.THREE;
+              const SIZE = 640;
+              const scene = new THREE.Scene();
+              const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 30);
+              camera.position.set(0.16, 0.10, 4.55);
+
+              const gl = new THREE.WebGLRenderer({
+                alpha: true, antialias: true, preserveDrawingBuffer: true,
+                powerPreference: "high-performance"
+              });
+              gl.setPixelRatio(1);
+              gl.setSize(SIZE, SIZE, false);
+              gl.setClearColor(0x000000, 0);
+              gl.outputColorSpace = THREE.SRGBColorSpace;
+              gl.toneMapping = THREE.ACESFilmicToneMapping;
+              gl.toneMappingExposure = 1.08;
+              gl.shadowMap.enabled = true;
+              gl.shadowMap.type = THREE.PCFSoftShadowMap;
+
+              scene.add(new THREE.HemisphereLight(0xffe0c4, 0x1b0904, 1.45));
+              const key = new THREE.DirectionalLight(0xffd1a6, 3.15);
+              key.position.set(-3.8, 4.8, 5.5);
+              key.castShadow = true;
+              scene.add(key);
+              const fill = new THREE.DirectionalLight(0xc87543, 1.0);
+              fill.position.set(4.2, -1.8, 3.5);
+              scene.add(fill);
+              const rim = new THREE.DirectionalLight(0x8d3c1d, 2.0);
+              rim.position.set(1.5, 2.6, -4.0);
+              scene.add(rim);
+              const soft = new THREE.PointLight(0xffb878, 0.48, 8);
+              soft.position.set(-1.5, 0.1, 3.2);
+              scene.add(soft);
+
+              // Build seamless procedural PBR maps: mottled seed color, high-frequency
+              // dry woody relief, tiny pits, and a roughness map (not a glossy wood finish).
+              const TEX_W = 1024, TEX_H = 512;
+              const colorCanvas = document.createElement("canvas");
+              const bumpCanvas = document.createElement("canvas");
+              const roughCanvas = document.createElement("canvas");
+              [colorCanvas, bumpCanvas, roughCanvas].forEach(c => { c.width = TEX_W; c.height = TEX_H; });
+              const colorCtx = colorCanvas.getContext("2d");
+              const bumpCtx = bumpCanvas.getContext("2d");
+              const roughCtx = roughCanvas.getContext("2d");
+              const colorImage = colorCtx.createImageData(TEX_W, TEX_H);
+              const bumpImage = bumpCtx.createImageData(TEX_W, TEX_H);
+              const roughImage = roughCtx.createImageData(TEX_W, TEX_H);
+              const fract = (n) => n - Math.floor(n);
+              const hash = (x, y) => fract(Math.sin(x * 127.1 + y * 311.7) * 43758.5453123);
+
+              for (let y = 0; y < TEX_H; y++) {
+                const v = y / TEX_H;
+                const phi = v * Math.PI;
+                const sinPhi = Math.max(0.08, Math.sin(phi));
+                for (let x = 0; x < TEX_W; x++) {
+                  const u = x / TEX_W;
+                  const theta = u * Math.PI * 2;
+                  let grooveDistance = Math.PI;
+                  for (let g = 0; g < 5; g++) {
+                    const base = (g + 0.5) * Math.PI * 2 / 5 - 0.16;
+                    const wander = 0.055 * Math.sin(phi * 3.1 + g * 1.7)
+                      + 0.025 * Math.sin(phi * 9.2 + g * 2.3);
+                    const center = base + wander;
+                    let d = Math.abs(theta - center);
+                    d = Math.min(d, Math.PI * 2 - d);
+                    grooveDistance = Math.min(grooveDistance, d);
+                  }
+                  const groove = Math.exp(-Math.pow(grooveDistance / 0.020, 2)) * Math.pow(sinPhi, 0.52);
+                  const ridgeEdge = Math.exp(-Math.pow((grooveDistance - 0.043) / 0.021, 2)) * Math.pow(sinPhi, 0.58);
+                  // Multi-scale, non-uniform seed relief; avoid the polished wood-grain look.
+                  const n1 = Math.sin(theta * 29 + phi * 23 + Math.sin(phi * 7)) * 0.42;
+                  const n2 = Math.sin(theta * 71 - phi * 53) * Math.sin(phi * 37 + theta * 11) * 0.31;
+                  const n3 = Math.sin(theta * 151 + phi * 127) * Math.sin(phi * 83 - theta * 19) * 0.19;
+                  const mottled = (hash(x * 0.19, y * 0.23) - 0.5) * 0.58;
+                  const fiber = Math.sin(theta * 137 + Math.sin(phi * 17) * 4.4) * 0.09;
+                  const wartNoise = Math.pow(Math.max(0, Math.sin(theta * 17 + phi * 13)
+                    * Math.sin(phi * 21 - theta * 9)), 3) * 0.24;
+                  const noise = n1 * 0.14 + n2 + n3 + mottled + fiber + wartNoise;
+                  const poleShade = 1 - 0.17 * Math.pow(Math.abs(Math.cos(phi)), 5);
+                  const shade = (1 + noise - groove * 0.60 + ridgeEdge * 0.16) * poleShade;
+                  const i = (y * TEX_W + x) * 4;
+                  colorImage.data[i] = Math.max(0, Math.min(255, 111 * shade + 15));
+                  colorImage.data[i + 1] = Math.max(0, Math.min(255, 51 * shade + 5));
+                  colorImage.data[i + 2] = Math.max(0, Math.min(255, 25 * shade + 2));
+                  colorImage.data[i + 3] = 255;
+
+                  const relief = 126 + noise * 72 - groove * 104 + ridgeEdge * 48;
+                  const b = Math.max(0, Math.min(255, relief));
+                  bumpImage.data[i] = bumpImage.data[i + 1] = bumpImage.data[i + 2] = b;
+                  bumpImage.data[i + 3] = 255;
+                  const rough = Math.max(0, Math.min(255, 224 + (hash(x, y) - 0.5) * 34 - groove * 9));
+                  roughImage.data[i] = roughImage.data[i + 1] = roughImage.data[i + 2] = rough;
+                  roughImage.data[i + 3] = 255;
+                }
+              }
+              colorCtx.putImageData(colorImage, 0, 0);
+              bumpCtx.putImageData(bumpImage, 0, 0);
+              roughCtx.putImageData(roughImage, 0, 0);
+
+              // Scatter small irregular pits with a raised lip and dark recessed centre.
+              for (let p = 0; p < 720; p++) {
+                const px = hash(p, 11) * TEX_W;
+                const py = hash(p, 19) * TEX_H;
+                const radius = 0.65 + hash(p, 23) * 2.25;
+                const shade = 0.55 + hash(p, 29) * 0.45;
+                const pit = colorCtx.createRadialGradient(px - radius * 0.25, py - radius * 0.25, 0.1, px, py, radius * 1.8);
+                pit.addColorStop(0, `rgba(22,7,3,${0.42 * shade})`);
+                pit.addColorStop(0.48, `rgba(35,11,4,${0.25 * shade})`);
+                pit.addColorStop(0.76, `rgba(205,126,76,${0.22 * shade})`);
+                pit.addColorStop(1, "rgba(205,126,76,0)");
+                colorCtx.fillStyle = pit;
+                colorCtx.beginPath(); colorCtx.arc(px, py, radius * 1.8, 0, Math.PI * 2); colorCtx.fill();
+
+                const reliefPit = bumpCtx.createRadialGradient(px - radius * 0.28, py - radius * 0.28, 0, px, py, radius * 1.8);
+                reliefPit.addColorStop(0, "rgb(62,62,62)");
+                reliefPit.addColorStop(0.50, "rgb(94,94,94)");
+                reliefPit.addColorStop(0.78, "rgb(177,177,177)");
+                reliefPit.addColorStop(1, "rgba(132,132,132,0)");
+                bumpCtx.fillStyle = reliefPit;
+                bumpCtx.beginPath(); bumpCtx.arc(px, py, radius * 1.8, 0, Math.PI * 2); bumpCtx.fill();
+              }
+
+              const colorMap = new THREE.CanvasTexture(colorCanvas);
+              colorMap.colorSpace = THREE.SRGBColorSpace;
+              colorMap.wrapS = colorMap.wrapT = THREE.RepeatWrapping;
+              colorMap.anisotropy = gl.capabilities.getMaxAnisotropy();
+              const bumpMap = new THREE.CanvasTexture(bumpCanvas);
+              bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+              bumpMap.anisotropy = gl.capabilities.getMaxAnisotropy();
+              const roughnessMap = new THREE.CanvasTexture(roughCanvas);
+              roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+
+              const rows = 224, cols = 320;
+              const positions = [], uvs = [], indices = [];
+
+              // Real Rudraksha is not a smooth five-sided wooden ball. Its surface
+              // is made of irregular, fused wart-like protuberances separated by
+              // deep, winding mukhi clefts. Distribute those protuberances over the
+              // seed and displace the actual mesh (not detached decorative spheres).
+              const wartFeatures = [];
+              for (let i = 0; i < 138; i++) {
+                const y = 1 - 2 * ((i + 0.5) / 138);
+                const phi = Math.acos(Math.max(-1, Math.min(1, y)));
+                const theta = (i * 2.399963229728653) % (Math.PI * 2);
+                wartFeatures.push({
+                  phi, theta,
+                  radius: 0.075 + hash(i, 61) * 0.075,
+                  height: 0.018 + hash(i, 67) * 0.036,
+                  phase: hash(i, 71) * Math.PI * 2
+                });
+              }
+
+              const seedPoint = (phi, theta, extra = 0) => {
+                const sp = Math.sin(phi), cp = Math.cos(phi);
+                const phase = 0.13 + 0.095 * Math.sin(phi * 1.7 + 0.4)
+                  + 0.045 * Math.sin(phi * 4.9 + 1.1);
+                const angle = 5 * theta + phase;
+                const lobe = Math.cos(angle);
+                // Narrow, deep clefts between the five mukhi lobes.
+                const cleft = Math.exp(-Math.pow(Math.sin(angle * 0.5) / 0.105, 2));
+                const ridge = Math.pow(Math.max(0, lobe), 1.7);
+                let wartRelief = 0;
+                for (let w = 0; w < wartFeatures.length; w++) {
+                  const f = wartFeatures[w];
+                  const dot = Math.sin(phi) * Math.sin(f.phi) * Math.cos(theta - f.theta)
+                    + Math.cos(phi) * Math.cos(f.phi);
+                  const angular = Math.acos(Math.max(-1, Math.min(1, dot)));
+                  const q = angular / f.radius;
+                  if (q < 2.35) {
+                    // Rounded irregular shoulders and a slightly flattened crown.
+                    const bump = Math.exp(-q * q * 1.35);
+                    const shoulder = Math.exp(-Math.pow((q - 1.05) / 0.34, 2));
+                    wartRelief += f.height * (bump - shoulder * 0.20)
+                      * (0.88 + 0.12 * Math.sin(f.phase + theta * 3 + phi * 2));
+                  }
+                }
+                const fine =
+                  Math.sin(19 * theta + 13 * phi) * Math.sin(11 * phi + 0.6) * 0.006
+                  + Math.sin(43 * theta - 27 * phi) * Math.sin(17 * phi + theta) * 0.0035
+                  + Math.sin(89 * theta + 57 * phi) * 0.0018;
+                const channelDepth = 0.052 * cleft * Math.pow(sp, 0.58);
+                const broadLobes = 0.105 * ridge * Math.pow(sp, 0.72);
+                const poleIrregularity = 0.018 * Math.sin(theta * 3 + 0.7) * Math.pow(Math.abs(cp), 6);
+                const r = 1 + broadLobes - channelDepth + wartRelief + fine + poleIrregularity + extra;
+                return new THREE.Vector3(
+                  r * sp * Math.cos(theta) * 0.91,
+                  r * cp * 1.02,
+                  r * sp * Math.sin(theta) * 0.88
+                );
+              };
+
+              for (let iy = 0; iy <= rows; iy++) {
+                const phi = Math.PI * iy / rows;
+                for (let ix = 0; ix <= cols; ix++) {
+                  const theta = Math.PI * 2 * ix / cols;
+                  const p = seedPoint(phi, theta);
+                  positions.push(p.x, p.y, p.z);
+                  uvs.push(ix / cols, 1 - iy / rows);
+                }
+              }
+              for (let iy = 0; iy < rows; iy++) {
+                for (let ix = 0; ix < cols; ix++) {
+                  const a = iy * (cols + 1) + ix;
+                  const b = a + cols + 1;
+                  indices.push(a, a + 1, b, b, a + 1, b + 1);
+                }
+              }
+              const geo = new THREE.BufferGeometry();
+              geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+              geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+              geo.setIndex(indices);
+              geo.computeVertexNormals();
+
+              const seedMaterial = new THREE.MeshStandardMaterial({
+                map: colorMap, bumpMap, bumpScale: 0.155,
+                roughnessMap, roughness: 0.98, metalness: 0,
+                color: 0xffffff
+              });
+              const group = new THREE.Group();
+              const seed = new THREE.Mesh(geo, seedMaterial);
+              seed.rotation.set(0.17, -0.24, 0.055);
+              seed.castShadow = true;
+              seed.receiveShadow = true;
+              group.add(seed);
+
+              // Five recessed, gently irregular mukhi seams follow the true surface.
+              for (let g = 0; g < 5; g++) {
+                const grooveTheta = (g + 0.5) * Math.PI * 2 / 5 - 0.16;
+                const groovePoints = [];
+                const leftRidge = [], rightRidge = [];
+                for (let j = 2; j < 98; j++) {
+                  const phi = Math.PI * j / 100;
+                  const wobble = 0.018 * Math.sin(phi * 4.2 + g * 1.7) + 0.009 * Math.sin(phi * 13 + g);
+                  groovePoints.push(seedPoint(phi, grooveTheta + wobble, 0.003));
+                  leftRidge.push(seedPoint(phi, grooveTheta - 0.045 + wobble, 0.006));
+                  rightRidge.push(seedPoint(phi, grooveTheta + 0.045 + wobble, 0.006));
+                }
+                const groove = new THREE.Mesh(
+                  new THREE.TubeGeometry(new THREE.CatmullRomCurve3(groovePoints), 180, 0.0105, 7, false),
+                  new THREE.MeshStandardMaterial({ color: 0x321208, roughness: 1 })
+                );
+                const ridgeMat = new THREE.MeshStandardMaterial({ color: 0xa85d36, roughness: 0.96 });
+                const ridgeA = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(leftRidge), 180, 0.005, 5, false), ridgeMat);
+                const ridgeB = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rightRidge), 180, 0.005, 5, false), ridgeMat);
+                [groove, ridgeA, ridgeB].forEach(m => { m.rotation.copy(seed.rotation); group.add(m); });
+              }
+
+              // Thread bore: dark recessed opening with a worn, raised rim at both poles.
+              const boreMat = new THREE.MeshStandardMaterial({ color: 0x160803, roughness: 1 });
+              const rimMat = new THREE.MeshStandardMaterial({ color: 0x8e4827, roughness: 0.96 });
+              const topBore = new THREE.Mesh(new THREE.SphereGeometry(0.050, 24, 16), boreMat);
+              topBore.position.set(0.004, 1.026, 0.012);
+              topBore.position.applyEuler(seed.rotation);
+              topBore.scale.set(0.78, 0.32, 0.72);
+              topBore.rotation.copy(seed.rotation);
+              group.add(topBore);
+              const topLip = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.009, 7, 28), rimMat);
+              topLip.position.copy(topBore.position);
+              topLip.scale.set(0.9, 0.55, 0.8);
+              topLip.rotation.copy(seed.rotation);
+              group.add(topLip);
+
+              // All wart-like protuberances are part of the continuous seed mesh;
+              // no detached bead-like bumps are placed on top of the surface.
+
+              group.rotation.set(0.035, 0.10, -0.025);
+              scene.add(group);
+
+              // A soft, transparent contact shadow gives the seed a grounded photographic read.
+              const shadowCanvas = document.createElement("canvas");
+              shadowCanvas.width = shadowCanvas.height = 256;
+              const sh = shadowCanvas.getContext("2d");
+              const shadowGrad = sh.createRadialGradient(128, 128, 16, 128, 128, 120);
+              shadowGrad.addColorStop(0, "rgba(12,4,1,0.34)");
+              shadowGrad.addColorStop(0.58, "rgba(12,4,1,0.14)");
+              shadowGrad.addColorStop(1, "rgba(12,4,1,0)");
+              sh.fillStyle = shadowGrad;
+              sh.fillRect(0, 0, 256, 256);
+
+              gl.render(scene, camera);
+              const sprite = document.createElement("canvas");
+              sprite.width = sprite.height = SIZE;
+              const spriteCtx = sprite.getContext("2d");
+              spriteCtx.drawImage(shadowCanvas, 178, 205, 284, 284);
+              spriteCtx.drawImage(gl.domElement, 0, 0);
+              this.beadSprites.rudraksha = sprite;
+
+              gl.dispose();
+              geo.dispose();
+              seedMaterial.dispose();
+              colorMap.dispose(); bumpMap.dispose(); roughnessMap.dispose();
+            } catch (err) {
+              console.warn("3D Rudraksha model fallback:", err);
+            }
+          };
+
+          if (window.THREE) { build(); return; }
+          if (document.querySelector('script[data-divya-three]')) return;
+          const script = document.createElement("script");
+          script.src = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js";
+          script.async = true;
+          script.dataset.divyaThree = "1";
+          script.onload = build;
+          script.onerror = () => console.warn("Three.js unavailable; using built-in Rudraksha rendering.");
+          document.head.appendChild(script);
+        }
+
+        // Deterministic pseudo-random helper for organic texture generation
+        hash2d(x, y) {
+          const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+          return n - Math.floor(n);
+        }
+
+        createBeadSprite(material, size) {
+          const off = document.createElement("canvas");
+          off.width = size;
+          off.height = size;
+          const c = off.getContext("2d");
+          const cx = size / 2;
+          const cy = size / 2;
+          const baseR = size * 0.415;
+
+          // Define the bead silhouette first, then clip every texture stroke to it.
+          // This keeps the sprite transparent outside the bead (no square tile).
+          c.save();
+          c.beginPath();
+          const steps = 144;
+          for (let i = 0; i <= steps; i++) {
+            const a = (i / steps) * Math.PI * 2;
+            let r = baseR;
+            if (material === "rudraksha") {
+              r += Math.cos(a * 5 + 0.25) * baseR * 0.022;
+              r += Math.sin(a * 11 + 0.8) * baseR * 0.009;
+              r *= 1 - 0.035 * Math.pow(Math.abs(Math.sin(a)), 4);
+            } else if (material === "tulsi") {
+              r *= 1 - 0.035 * Math.abs(Math.sin(a));
+            }
+            const px = cx + Math.cos(a) * r;
+            const py = cy + Math.sin(a) * r;
+            if (i === 0) c.moveTo(px, py);
+            else c.lineTo(px, py);
+          }
+          c.closePath();
+          c.clip();
+
+          const palettes = {
+            rudraksha: ["#d58a58", "#a9532b", "#713016", "#2a1007"],
+            tulsi: ["#faebd4", "#d8b17b", "#a37843", "#63431e"],
+            sphatik: ["#ffffff", "#eef9ff", "#a7d2e8", "#3e6980"],
+            chandan: ["#f7d49e", "#cc8f46", "#8f5920", "#54300c"]
+          };
+          const colors = palettes[material] || palettes.rudraksha;
+          const grad = c.createRadialGradient(
+            cx - baseR * 0.30, cy - baseR * 0.34, baseR * 0.04,
+            cx, cy, baseR * 1.12
+          );
+          grad.addColorStop(0, colors[0]);
+          grad.addColorStop(0.34, colors[1]);
+          grad.addColorStop(0.72, colors[2]);
+          grad.addColorStop(1, colors[3]);
+          c.fillStyle = grad;
+          c.fillRect(0, 0, size, size);
+
+          if (material === "rudraksha") {
+            // Five authentic longitudinal mukhi divisions: raised rounded
+            // lobes separated by deep, irregular channels (not leaf/chevron lines).
+            for (let i = 0; i < 5; i++) {
+              const t = (i - 2) / 2;
+              const x = cx + t * baseR * 0.68;
+              const bow = (1 - Math.abs(t)) * baseR * 0.13;
+
+              if (i > 0) {
+                c.beginPath();
+                c.moveTo(x - 1, cy - baseR * 0.91);
+                c.bezierCurveTo(
+                  x - bow - 2, cy - baseR * 0.36,
+                  x + bow + 1, cy + baseR * 0.36,
+                  x - 1, cy + baseR * 0.91
+                );
+                c.strokeStyle = "rgba(31, 8, 2, 0.78)";
+                c.lineWidth = size * 0.021;
+                c.lineCap = "round";
+                c.stroke();
+
+                c.beginPath();
+                c.moveTo(x + size * 0.012, cy - baseR * 0.82);
+                c.bezierCurveTo(
+                  x + size * 0.012 - bow * 0.5, cy - baseR * 0.30,
+                  x + size * 0.012 + bow * 0.55, cy + baseR * 0.30,
+                  x + size * 0.012, cy + baseR * 0.82
+                );
+                c.strokeStyle = "rgba(239, 164, 109, 0.43)";
+                c.lineWidth = size * 0.009;
+                c.stroke();
+              }
+
+              // Soft raised lobe highlight on alternating faces.
+              c.beginPath();
+              c.moveTo(x - baseR * 0.055, cy - baseR * 0.78);
+              c.bezierCurveTo(
+                x - baseR * 0.10 - bow * 0.4, cy - baseR * 0.22,
+                x + baseR * 0.07 + bow * 0.4, cy + baseR * 0.28,
+                x - baseR * 0.025, cy + baseR * 0.78
+              );
+              c.strokeStyle = "rgba(245, 174, 119, 0.13)";
+              c.lineWidth = size * 0.045;
+              c.stroke();
+            }
+
+            // Pits and fine fibrous grain, individually distributed on the seed.
+            for (let p = 0; p < 260; p++) {
+              const rx = (this.hash2d(p, 1.3) * 2 - 1) * baseR * 0.84;
+              const ry = (this.hash2d(p, 7.9) * 2 - 1) * baseR * 0.84;
+              if (Math.hypot(rx, ry) > baseR * 0.84) continue;
+              const dotR = 0.45 + this.hash2d(p, 3.1) * 1.25;
+              c.beginPath();
+              c.arc(cx + rx, cy + ry, dotR, 0, Math.PI * 2);
+              c.fillStyle = this.hash2d(p, 5.7) > 0.5
+                ? "rgba(255, 190, 137, 0.20)"
+                : "rgba(24, 7, 2, 0.30)";
+              c.fill();
+            }
+
+            // Small natural thread aperture at the top pole.
+            c.beginPath();
+            c.ellipse(cx, cy - baseR * 0.88, baseR * 0.105, baseR * 0.065, 0, 0, Math.PI * 2);
+            c.fillStyle = "rgba(20, 5, 1, 0.88)";
+            c.fill();
+            c.beginPath();
+            c.ellipse(cx - 1, cy - baseR * 0.90, baseR * 0.045, baseR * 0.025, 0, 0, Math.PI * 2);
+            c.fillStyle = "rgba(205, 112, 61, 0.35)";
+            c.fill();
+
+            // Scattered short wrinkles add the rough seed-like surface.
+            for (let row = -3; row <= 3; row++) {
+              const yy = cy + row * baseR * 0.22;
+              c.beginPath();
+              c.moveTo(cx - baseR * 0.66, yy);
+              c.quadraticCurveTo(cx, yy + (row % 2 ? 2.2 : -2.2), cx + baseR * 0.66, yy - 1);
+              c.strokeStyle = "rgba(38, 10, 3, 0.16)";
+              c.lineWidth = size * 0.005;
+              c.stroke();
+            }
+          } else if (material === "tulsi") {
+            c.strokeStyle = "rgba(95, 58, 22, 0.22)";
+            c.lineWidth = 1.3;
+            for (let g = -5; g <= 5; g++) {
+              c.beginPath();
+              c.ellipse(cx, cy + g * baseR * 0.15, baseR * 0.94, baseR * 0.13, 0.06, 0, Math.PI * 2);
+              c.stroke();
+            }
+          } else if (material === "sphatik") {
+            const glint = c.createRadialGradient(cx - baseR * 0.28, cy - baseR * 0.30, 1, cx - baseR * 0.2, cy - baseR * 0.2, baseR * 0.55);
+            glint.addColorStop(0, "rgba(255,255,255,0.82)");
+            glint.addColorStop(1, "rgba(255,255,255,0)");
+            c.fillStyle = glint;
+            c.fillRect(0, 0, size, size);
+          } else if (material === "chandan") {
+            c.strokeStyle = "rgba(93, 48, 13, 0.20)";
+            c.lineWidth = 1;
+            for (let g = -4; g <= 4; g++) {
+              c.beginPath();
+              c.ellipse(cx, cy + g * baseR * 0.18, baseR * 0.86, baseR * 0.09, 0.04, 0, Math.PI * 2);
+              c.stroke();
+            }
+          }
+
+          // Spherical edge shading and a fine outline make every bead distinct.
+          const rim = c.createRadialGradient(
+            cx - baseR * 0.18, cy - baseR * 0.18, baseR * 0.20,
+            cx, cy, baseR * 1.02
+          );
+          rim.addColorStop(0, "rgba(0,0,0,0)");
+          rim.addColorStop(0.78, "rgba(0,0,0,0.08)");
+          rim.addColorStop(1, "rgba(0,0,0,0.38)");
+          c.fillStyle = rim;
+          c.fillRect(0, 0, size, size);
+          c.restore();
+
+          c.save();
+          c.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const a = (i / steps) * Math.PI * 2;
+            let r = baseR;
+            if (material === "rudraksha") {
+              r += Math.cos(a * 5 + 0.25) * baseR * 0.022;
+              r += Math.sin(a * 11 + 0.8) * baseR * 0.009;
+              r *= 1 - 0.035 * Math.pow(Math.abs(Math.sin(a)), 4);
+            } else if (material === "tulsi") {
+              r *= 1 - 0.035 * Math.abs(Math.sin(a));
+            }
+            const px = cx + Math.cos(a) * r;
+            const py = cy + Math.sin(a) * r;
+            if (i === 0) c.moveTo(px, py);
+            else c.lineTo(px, py);
+          }
+          c.closePath();
+          c.strokeStyle = material === "rudraksha"
+            ? "rgba(27, 8, 2, 0.82)"
+            : "rgba(35, 18, 8, 0.42)";
+          c.lineWidth = size * 0.012;
+          c.stroke();
+          c.restore();
+          return off;
+        }
+
+        setMaterial(mat) {
+          this.material = mat;
+        }
+
+        setTargetCount(count) {
+          this.targetCount = Math.max(1, count);
+          this.currentCount = 0;
+          this.advanceOffset = 0;
+          this.targetAdvanceOffset = 0;
+        }
+
+        advanceOneBead() {
+          this.currentCount += 1;
+          this.targetAdvanceOffset += 1;
+          this.swayVelocity += (Math.random() - 0.5) * 0.018;
+          this.tasselVelocity += 0.035;
+          return this.currentCount >= this.targetCount;
+        }
+
+        resetCycleAfterCompletion() {
+          this.currentCount = 0;
+        }
+
+        resetAll() {
+          this.currentCount = 0;
+          this.advanceOffset = 0;
+          this.targetAdvanceOffset = 0;
+        }
+
+        getFpvLoopPoint(u, dims) {
+          const { centerX, topY, bottomY, halfWidthX, zDepth } = dims;
+          const theta = u * Math.PI * 2;
+
+          // A continuous hanging mala: both sides of the loop travel vertically
+          // past the counting bead, so beads remain visible above AND below it.
+          const spanY = Math.max(120, bottomY - topY);
+          const y = topY + 0.5 * (1 - Math.cos(theta)) * spanY;
+
+          // Keep the two sides close together, like a real strand viewed slightly
+          // from the side. This creates overlapping beads without hiding a whole side.
+          const x = centerX - Math.sin(theta) * halfWidthX;
+          const z = -Math.sin(theta) * zDepth;
+          return { x, y, z };
+        }
+
+        getLoopDimensions() {
+          const n = this.targetCount;
+          const centerX = this.width * 0.5;
+          const primaryR = Math.min(35, Math.max(29, this.width * 0.084));
+          let beadBaseR = primaryR * 0.48;
+
+          if (n <= 13) beadBaseR = primaryR * 0.54;
+          else if (n > 108) beadBaseR = primaryR * 0.43;
+
+          // Put the numbered counting bead inside the hanging strand rather than
+          // at its endpoint. This leaves a visible run of beads above and below it.
+          const centerY = Math.max(primaryR * 3.4, this.height * 0.34);
+          const topY = Math.max(primaryR * 1.25, centerY - primaryR * 2.35);
+          const bottomY = Math.min(this.height - 48, centerY + this.height * 0.53);
+          const halfWidthX = beadBaseR * 0.34;
+
+          return {
+            centerX,
+            centerY,
+            topY,
+            bottomY,
+            halfWidthX,
+            zDepth: 42,
+            beadBaseR,
+            primaryR
+          };
+        }
+
+        updatePhysics(dt) {
+          const diff = this.targetAdvanceOffset - this.advanceOffset;
+          this.advanceOffset += diff * Math.min(1, dt * 16);
+          if (Math.abs(diff) < 0.0005) {
+            this.advanceOffset = this.targetAdvanceOffset;
+          }
+
+          const springK = 14;
+          const damping = 0.90;
+          const accel = -springK * (this.swayAngle - this.targetTiltX);
+          this.swayVelocity = (this.swayVelocity + accel * dt) * damping;
+          this.swayAngle += this.swayVelocity * dt;
+
+          const tasselAccel = -20 * (this.tasselAngle - this.swayAngle * 1.45);
+          this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * 0.88;
+          this.tasselAngle += this.tasselVelocity * dt;
+        }
+
+        drawSilkenTassel(ctx, x, y, scale, angle) {
+          const len = 36 * scale;
+          const spread = 12 * scale;
+
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(angle);
+
+          // Woven golden-silk cap & Brahma knot collar
+          ctx.fillStyle = "#c9852c";
+          ctx.beginPath();
+          ctx.roundRect(-5 * scale, -1 * scale, 10 * scale, 7 * scale, 2.5 * scale);
+          ctx.fill();
+
+          ctx.strokeStyle = "#f2c272";
+          ctx.lineWidth = 1.1 * scale;
+          ctx.strokeRect(-4.5 * scale, 1.5 * scale, 9 * scale, 2 * scale);
+
+          // Fine silken jhalar threads
+          const strands = 17;
+          for (let i = 0; i < strands; i++) {
+            const t = (i / (strands - 1)) * 2 - 1;
+            ctx.beginPath();
+            ctx.moveTo(t * 3.5 * scale, 5.5 * scale);
+            ctx.quadraticCurveTo(t * spread * 0.62, len * 0.55, t * spread, len);
+            ctx.strokeStyle = i % 2 === 0 ? "#c8681c" : "#e89e42";
+            ctx.lineWidth = 1.25 * scale;
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
+
+        render() {
+          const ctx = this.ctx;
+          ctx.clearRect(0, 0, this.width, this.height);
+
+          const dims = this.getLoopDimensions();
+          const totalSlots = this.targetCount + 1;
+          const sprite = this.beadSprites[this.material] || this.beadSprites.rudraksha;
+
+          ctx.save();
+          ctx.translate(dims.centerX, dims.centerY);
+          ctx.rotate(this.swayAngle);
+          ctx.translate(-dims.centerX, -dims.centerY);
+
+          // Keep the physical loop for bead travel, but render only the lower
+          // hanging run. The unwanted upper return arch is hidden behind the
+          // counting position instead of changing the mala's geometry.
+          const upperCutY = dims.centerY - dims.primaryR * 0.42;
+          const spanY = Math.max(120, dims.bottomY - dims.topY);
+          const cosCut = Math.max(-1, Math.min(1, 1 - 2 * (upperCutY - dims.topY) / spanY));
+          const uCut = Math.acos(cosCut) / (Math.PI * 2);
+          ctx.beginPath();
+          const cordSteps = 72;
+          for (let s = 0; s <= cordSteps; s++) {
+            const u = uCut + (s / cordSteps) * (1 - 2 * uCut);
+            const pt = this.getFpvLoopPoint(u, dims);
+            if (s === 0) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.strokeStyle = "rgba(176, 124, 74, 0.38)";
+          ctx.lineWidth = 2.4;
+          ctx.stroke();
+
+          const guruIndex = Math.floor(totalSlots / 2);
+          const items = [];
+          const pullFraction = Math.min(0.45, Math.max(0, this.dragPull / 95));
+          const effectiveOffset = this.advanceOffset + pullFraction;
+
+          for (let k = 0; k < totalSlots; k++) {
+            const u = (((k + effectiveOffset) % totalSlots) + totalSlots) % totalSlots / totalSlots;
+            const pt = this.getFpvLoopPoint(u, dims);
+            const isGuru = k === guruIndex;
+
+            // Render both strands. The rear strand is drawn first by the depth sort
+            // below, allowing the front beads to overlap it naturally.
+            let renderX = pt.x;
+            if (isGuru && u > 0.02 && u < 0.50) {
+              // Let the Guru bead peek slightly to the side as it passes behind the strand.
+              renderX += Math.sin(u * Math.PI * 2) * (dims.beadBaseR * 0.48);
+            }
+
+            const depthNorm = (pt.z + dims.zDepth) / (2 * dims.zDepth);
+            const perspectiveScale = 0.82 + 0.24 * depthNorm;
+            const verticalFpvBoost = 1.0 - Math.max(0, (pt.y - dims.centerY) / Math.max(1, dims.bottomY - dims.centerY)) * 0.08;
+            const scale = perspectiveScale * verticalFpvBoost;
+            const distFromCenter = Math.min(u, 1 - u);
+
+            items.push({
+              k,
+              u,
+              x: renderX,
+              y: pt.y,
+              z: pt.z,
+              depthNorm,
+              scale,
+              distFromCenter,
+              isGuru
+            });
+          }
+
+          // Painter's sort: rear beads render first, then nearer beads naturally
+          // overlap them to create an oblique, side-looking perspective.
+          items.sort((a, b) => {
+            if (a.z < -2 && b.z >= -2) return -1;
+            if (b.z < -2 && a.z >= -2) return 1;
+            return b.y - a.y;
+          });
+
+          // Draw every mala bead except those physically occupying the counter's
+          // footprint. The clear zone prevents neighbouring beads from being
+          // painted over by the numbered bead while leaving beads visible above
+          // and below it.
+          const cx = dims.centerX + this.swayAngle * 10;
+          const cy = dims.centerY - pullFraction * 16;
+          const pr = dims.primaryR;
+
+          for (const item of items) {
+            // Remove only beads on the short upper return section above the
+            // numbered counting bead. Keep the lower strand, Guru bead and
+            // moving jhalar untouched.
+            if (item.y < dims.centerY - dims.primaryR * 0.42) continue;
+            const r = (item.isGuru ? dims.beadBaseR * 1.36 : dims.beadBaseR) * item.scale;
+            const dx = item.x - cx;
+            const dy = item.y - cy;
+            if (Math.hypot(dx, dy) < pr + r * 0.48) continue;
+
+            if (item.isGuru) {
+              this.drawSilkenTassel(ctx, item.x, item.y + r * 0.80, item.scale, this.tasselAngle - this.swayAngle);
+            }
+
+            ctx.drawImage(sprite, item.x - r, item.y - r, r * 2, r * 2);
+          }
+
+          ctx.restore();
+
+          // Numbered counting bead sits within the continuous hanging strand.
+
+
+
+          ctx.drawImage(sprite, cx - pr, cy - pr, pr * 2, pr * 2);
+
+          const displayCount = String(this.currentCount);
+          const fontSize = displayCount.length >= 4 ? pr * 0.50 : displayCount.length === 3 ? pr * 0.60 : pr * 0.72;
+          ctx.save();
+          ctx.font = `700 ${Math.round(fontSize)}px "Cinzel", "Playfair Display", Georgia, serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+
+          const isLightBead = this.material === "sphatik" || this.material === "tulsi";
+          ctx.fillStyle = isLightBead ? "#1e1005" : "#fff9f0";
+          ctx.fillText(displayCount, cx, cy + 1);
+          ctx.restore();
+        }
+      }
+
+      /* ======================================================================
+         4. APPLICATION CONTROLLER & GESTURE LOCKING
+         ====================================================================== */
+      const STORAGE_KEY = "divya_jap_single_v2";
+
+      const state = {
+        category: "naam",
+        chantId: "ram",
+        chantTitle: "RAM",
+        chantSubtitle: "श्री राम जय राम जय जय राम",
+        chalisaId: "hanuman_chalisa",
+        verseIndex: 0,
+        material: "rudraksha",
+        targetCount: 108,
+        currentCount: 0,
+        totalCount: 0,
+        malasCompleted: 0,
+        soundEnabled: true,
+        theme: "dark"
+      };
+
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        if (saved && typeof saved === "object") {
+          Object.assign(state, saved);
+        }
+      } catch (_) {}
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (_) {}
+      }
+
+      const canvas = document.getElementById("malaCanvas");
+      const malaStage = document.getElementById("malaStage");
+      const renderer = new FpvMalaRenderer(canvas);
+      renderer.setMaterial(state.material);
+      renderer.setTargetCount(state.targetCount);
+      renderer.currentCount = state.currentCount;
+      renderer.advanceOffset = state.currentCount;
+      renderer.targetAdvanceOffset = state.currentCount;
+
+      const malasCompletedVal = document.getElementById("malasCompletedVal");
+      const totalCountVal = document.getElementById("totalCountVal");
+      const chantCategoryTag = document.getElementById("chantCategoryTag");
+      const chantTitleEl = document.getElementById("chantTitle");
+      const chantSubtitleEl = document.getElementById("chantSubtitle");
+      const targetCountDisplay = document.getElementById("targetCountDisplay");
+      const malaProgressFill = document.getElementById("malaProgressFill");
+      const toastBanner = document.getElementById("toastBanner");
+      const chalisaControls = document.getElementById("chalisaControls");
+      const verseProgressLabel = document.getElementById("verseProgressLabel");
+
+      let toastTimer = null;
+      function showToast(msg) {
+        toastBanner.textContent = msg;
+        toastBanner.classList.add("visible");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toastBanner.classList.remove("visible");
+        }, 2400);
+      }
+
+      function updateUI() {
+        document.documentElement.setAttribute("data-theme", state.theme);
+        malasCompletedVal.textContent = state.malasCompleted;
+        totalCountVal.textContent = state.totalCount;
+        targetCountDisplay.textContent = state.targetCount;
+
+        const pct = Math.min(100, (state.currentCount / Math.max(1, state.targetCount)) * 100);
+        malaProgressFill.style.width = `${pct}%`;
+
+        const catMap = {
+          naam: "NAAM JAP",
+          mantra: "MANTRA JAP",
+          chalisa: "CHALISA PATH",
+          custom: "SACRED JAP"
+        };
+        chantCategoryTag.textContent = catMap[state.category] || "NAAM JAP";
+        chantTitleEl.textContent = state.chantTitle;
+
+        if (state.category === "chalisa") {
+          const chalisa = DIVYA_DATA.chalisas.find((c) => c.id === state.chalisaId) || DIVYA_DATA.chalisas[0];
+          const totalV = chalisa.verses.length;
+          state.verseIndex = Math.max(0, Math.min(totalV - 1, state.verseIndex));
+          chantSubtitleEl.textContent = chalisa.verses[state.verseIndex];
+          verseProgressLabel.textContent = `Verse ${state.verseIndex + 1} / ${totalV}`;
+          chalisaControls.classList.remove("hidden");
+        } else {
+          chantSubtitleEl.textContent = state.chantSubtitle;
+          chalisaControls.classList.add("hidden");
+        }
+
+        document.querySelectorAll(".mat-pill").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.material === state.material);
+        });
+
+        SacredAudio.enabled = state.soundEnabled;
+        document.getElementById("btnSound").classList.toggle("active", state.soundEnabled);
+        document.getElementById("iconSoundOn").classList.toggle("hidden", !state.soundEnabled);
+        document.getElementById("iconSoundOff").classList.toggle("hidden", state.soundEnabled);
+      }
+
+      function triggerSingleBeadAdvance() {
+        const completed = renderer.advanceOneBead();
+        state.currentCount = renderer.currentCount;
+        state.totalCount += 1;
+
+        if (state.category === "chalisa") {
+          const chalisa = DIVYA_DATA.chalisas.find((c) => c.id === state.chalisaId);
+          if (chalisa) {
+            state.verseIndex = (state.verseIndex + 1) % chalisa.verses.length;
+          }
+        }
+
+        if (completed) {
+          state.malasCompleted += 1;
+          SacredAudio.playSumeruBell();
+          if (navigator.vibrate) navigator.vibrate([45, 60, 90]);
+          showToast(`Sumeru Reached • ${state.malasCompleted} Mala Completed`);
+
+          setTimeout(() => {
+            renderer.resetCycleAfterCompletion();
+            state.currentCount = 0;
+            updateUI();
+            saveState();
+          }, 420);
+        } else {
+          SacredAudio.playBeadClick(state.material);
+          if (navigator.vibrate) navigator.vibrate(14);
+        }
+
+        updateUI();
+        saveState();
+      }
+
+      let pointerActive = false;
+      let startY = 0;
+      let hasTriggeredInGesture = false;
+      const SLIDE_THRESHOLD = 28;
+
+      malaStage.addEventListener("pointerdown", (e) => {
+        pointerActive = true;
+        startY = e.clientY;
+        hasTriggeredInGesture = false;
+        renderer.dragPull = 0;
+        SacredAudio.ensureContext();
+      });
+
+      window.addEventListener("pointermove", (e) => {
+        if (!pointerActive) {
+          const normX = (e.clientX / Math.max(1, window.innerWidth) - 0.5) * 2;
+          renderer.targetTiltX = normX * 0.08;
+          return;
+        }
+
+        if (!pointerActive) return;
+        const deltaY = startY - e.clientY;
+
+        if (deltaY <= 0) {
+          renderer.dragPull = 0;
+          return;
+        }
+
+        if (!hasTriggeredInGesture) {
+          renderer.dragPull = Math.min(SLIDE_THRESHOLD * 1.4, deltaY);
+          if (deltaY >= SLIDE_THRESHOLD) {
+            hasTriggeredInGesture = true;
+            renderer.dragPull = 0;
+            triggerSingleBeadAdvance();
+          }
+        }
+      });
+
+      function endPointerGesture(e) {
+        if (!pointerActive) return;
+        const deltaY = e && typeof e.clientY === "number" ? startY - e.clientY : 0;
+        if (!hasTriggeredInGesture && Math.abs(deltaY) < 8) {
+          triggerSingleBeadAdvance();
+        }
+        pointerActive = false;
+        hasTriggeredInGesture = false;
+        renderer.dragPull = 0;
+      }
+
+      window.addEventListener("pointerup", endPointerGesture);
+      window.addEventListener("pointercancel", endPointerGesture);
+
+      window.addEventListener("keydown", (e) => {
+        if (e.target.tagName === "INPUT") return;
+        if (e.key === "ArrowUp" || e.key === " ") {
+          e.preventDefault();
+          triggerSingleBeadAdvance();
+        }
+      });
+
+      document.querySelectorAll(".mat-pill").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          state.material = btn.dataset.material;
+          renderer.setMaterial(state.material);
+          SacredAudio.playBeadClick(state.material);
+          updateUI();
+          saveState();
+        });
+      });
+
+      document.getElementById("btnSound").addEventListener("click", () => {
+        state.soundEnabled = !state.soundEnabled;
+        updateUI();
+        saveState();
+        if (state.soundEnabled) SacredAudio.playBeadClick(state.material);
+      });
+
+      document.getElementById("btnTheme").addEventListener("click", () => {
+        state.theme = state.theme === "dark" ? "light" : "dark";
+        updateUI();
+        saveState();
+      });
+
+      document.getElementById("btnReset").addEventListener("click", () => {
+        state.currentCount = 0;
+        renderer.resetAll();
+        updateUI();
+        saveState();
+        showToast("Current Mala Count Reset to 0");
+      });
+
+      document.getElementById("btnPrevVerse").addEventListener("click", () => {
+        const chalisa = DIVYA_DATA.chalisas.find((c) => c.id === state.chalisaId);
+        if (!chalisa) return;
+        state.verseIndex = (state.verseIndex - 1 + chalisa.verses.length) % chalisa.verses.length;
+        updateUI();
+      });
+
+      document.getElementById("btnNextVerse").addEventListener("click", () => {
+        const chalisa = DIVYA_DATA.chalisas.find((c) => c.id === state.chalisaId);
+        if (!chalisa) return;
+        state.verseIndex = (state.verseIndex + 1) % chalisa.verses.length;
+        updateUI();
+      });
+
+      document.getElementById("btnReadFullChalisa").addEventListener("click", () => {
+        const chalisa = DIVYA_DATA.chalisas.find((c) => c.id === state.chalisaId);
+        if (!chalisa) return;
+        document.getElementById("readerModalHeading").textContent = chalisa.title;
+        document.getElementById("readerBody").innerHTML = chalisa.verses
+          .map((v) => `<div class="reader-verse">${v}</div>`)
+          .join("");
+        document.getElementById("readerModal").classList.remove("hidden");
+      });
+
+      function populateModals() {
+        document.getElementById("naamList").innerHTML = DIVYA_DATA.naams
+          .map(
+            (n) => `
+            <button class="choice-card ${state.category === "naam" && state.chantId === n.id ? "selected" : ""}" data-type="naam" data-id="${n.id}" type="button">
+              <div class="choice-title">${n.title}</div>
+              <div class="choice-sub">${n.subtitle}</div>
+            </button>`
+          )
+          .join("");
+
+        document.getElementById("mantraList").innerHTML = DIVYA_DATA.mantras
+          .map(
+            (m) => `
+            <button class="choice-card ${state.category === "mantra" && state.chantId === m.id ? "selected" : ""}" data-type="mantra" data-id="${m.id}" type="button">
+              <div class="choice-title">${m.title}</div>
+              <div class="choice-sub">${m.subtitle}</div>
+            </button>`
+          )
+          .join("");
+
+        document.getElementById("chalisaList").innerHTML = DIVYA_DATA.chalisas
+          .map(
+            (c) => `
+            <button class="choice-card ${state.category === "chalisa" && state.chalisaId === c.id ? "selected" : ""}" data-type="chalisa" data-id="${c.id}" type="button">
+              <div class="choice-title">${c.title}</div>
+              <div class="choice-sub">${c.subtitle}</div>
+            </button>`
+          )
+          .join("");
+
+        document.getElementById("targetPresetGrid").innerHTML = DIVYA_DATA.targetPresets
+          .map(
+            (num) => `
+            <button class="preset-btn ${state.targetCount === num ? "selected" : ""}" data-target="${num}" type="button">
+              ${num}
+            </button>`
+          )
+          .join("");
+      }
+
+      document.getElementById("btnChantMenu").addEventListener("click", () => {
+        populateModals();
+        document.getElementById("chantModal").classList.remove("hidden");
+      });
+
+      document.getElementById("btnTargetMenu").addEventListener("click", () => {
+        populateModals();
+        document.getElementById("targetModal").classList.remove("hidden");
+      });
+
+      document.querySelectorAll("[data-close]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.getElementById(btn.dataset.close).classList.add("hidden");
+        });
+      });
+
+      document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+        backdrop.addEventListener("click", (e) => {
+          if (e.target === backdrop) backdrop.classList.add("hidden");
+        });
+      });
+
+      document.querySelectorAll(".tab-btn").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          const target = tab.dataset.tab;
+          ["naam", "mantra", "chalisa", "custom"].forEach((key) => {
+            const panel = document.getElementById(`tabContent${key.charAt(0).toUpperCase() + key.slice(1)}`);
+            panel.classList.toggle("hidden", key !== target);
+          });
+        });
+      });
+
+      document.getElementById("chantModal").addEventListener("click", (e) => {
+        const card = e.target.closest(".choice-card");
+        if (!card) return;
+        const { type, id } = card.dataset;
+
+        if (type === "naam") {
+          const item = DIVYA_DATA.naams.find((x) => x.id === id);
+          if (item) {
+            state.category = "naam";
+            state.chantId = item.id;
+            state.chantTitle = item.title;
+            state.chantSubtitle = item.subtitle;
+          }
+        } else if (type === "mantra") {
+          const item = DIVYA_DATA.mantras.find((x) => x.id === id);
+          if (item) {
+            state.category = "mantra";
+            state.chantId = item.id;
+            state.chantTitle = item.title;
+            state.chantSubtitle = item.subtitle;
+          }
+        } else if (type === "chalisa") {
+          const item = DIVYA_DATA.chalisas.find((x) => x.id === id);
+          if (item) {
+            state.category = "chalisa";
+            state.chalisaId = item.id;
+            state.chantTitle = item.title;
+            state.verseIndex = 0;
+          }
+        }
+
+        updateUI();
+        saveState();
+        document.getElementById("chantModal").classList.add("hidden");
+      });
+
+      document.getElementById("customChantForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const title = document.getElementById("customNameInput").value.trim();
+        const sub = document.getElementById("customSubInput").value.trim();
+        if (!title) return;
+        state.category = "custom";
+        state.chantId = "custom";
+        state.chantTitle = title.toUpperCase();
+        state.chantSubtitle = sub || "निरन्तर नाम स्मरण";
+        updateUI();
+        saveState();
+        document.getElementById("chantModal").classList.add("hidden");
+      });
+
+      document.getElementById("targetPresetGrid").addEventListener("click", (e) => {
+        const btn = e.target.closest(".preset-btn");
+        if (!btn) return;
+        const count = parseInt(btn.dataset.target, 10);
+        if (!isNaN(count) && count >= 1) {
+          state.targetCount = count;
+          state.currentCount = 0;
+          renderer.setTargetCount(count);
+          updateUI();
+          saveState();
+          document.getElementById("targetModal").classList.add("hidden");
+          showToast(`Mala Set to ${count} Beads + 1 Sumeru`);
+        }
+      });
+
+      document.getElementById("customTargetForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const val = parseInt(document.getElementById("customTargetInput").value, 10);
+        if (!isNaN(val) && val >= 1 && val <= 10008) {
+          state.targetCount = val;
+          state.currentCount = 0;
+          renderer.setTargetCount(val);
+          updateUI();
+          saveState();
+          document.getElementById("targetModal").classList.add("hidden");
+          showToast(`Mala Set to ${val} Beads + 1 Sumeru`);
+        }
+      });
+
+      renderer.resize();
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => renderer.resize()).observe(malaStage);
+      } else {
+        window.addEventListener("resize", () => renderer.resize());
+      }
+
+      updateUI();
+
+      let lastTime = performance.now();
+      function loop(now) {
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        renderer.updatePhysics(dt);
+        renderer.render();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    })();

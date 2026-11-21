@@ -1,85 +1,184 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#170d08">
-  <meta name="description" content="Divya Jap — a quiet, offline-friendly digital mala for naam jap and mantra jap.">
-  <title>Divya Jap — Digital Mala</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="app.js" defer></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#140c07" />
+  <meta name="description" content="Divya Jap — Realistic First-Person View (FPV) Digital Mala Counter for Naam Jap, Mantra Jap, and Chalisa Jap with Rudraksha, Tulsi, Sphatik, and Chandan beads." />
+  <title>Divya Jap — Digital Mala Counter</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23140c07'/%3E%3Ccircle cx='32' cy='32' r='22' fill='%23753114' stroke='%23f0b865' stroke-width='2'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='serif' font-size='22' font-weight='bold' fill='%23fff7ed'%3E%E0%A5%90%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="ambient" aria-hidden="true"></div>
-  <main class="app">
-    <header class="topbar">
-      <button class="pill" id="chantOpen" type="button"><span class="om">ॐ</span><span>Chant</span><span class="chevron">⌄</span></button>
-      <div class="stats" aria-live="polite">
-        <div><small>MALAS</small><strong id="malas">0</strong></div>
-        <i></i>
-        <div><small>TOTAL</small><strong id="total">0</strong></div>
+  <div class="ambient-glow" aria-hidden="true"></div>
+
+  <div class="app-shell">
+    <!-- Top HUD -->
+    <header class="top-hud">
+      <div class="hud-bar">
+        <button id="btnChantMenu" class="pill-btn chant-selector-btn" type="button" aria-label="Select Naam, Mantra, or Chalisa">
+          <span class="om-badge" aria-hidden="true">ॐ</span>
+          <span>Chant</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+
+        <div class="stats-pill" role="status" aria-live="polite">
+          <div class="stat-item">
+            <span class="stat-label">Malas</span>
+            <span id="malasCompletedVal" class="stat-value">0</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-label">Total</span>
+            <span id="totalCountVal" class="stat-value">0</span>
+          </div>
+        </div>
+
+        <div class="icon-actions">
+          <button id="btnSound" class="icon-btn active" type="button" title="Toggle Bead & Temple Bell Audio" aria-label="Toggle Audio">
+            <svg id="iconSoundOn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+            <svg id="iconSoundOff" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+          </button>
+          <button id="btnTheme" class="icon-btn" type="button" title="Switch Day / Night Temple Theme" aria-label="Switch Theme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </button>
+          <button id="btnReset" class="icon-btn" type="button" title="Reset Current Mala Count" aria-label="Reset Count">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          </button>
+        </div>
       </div>
-      <div class="actions">
-        <button class="icon-btn" id="soundToggle" type="button" aria-label="Toggle sound" title="Sound">♫</button>
-        <button class="icon-btn" id="themeToggle" type="button" aria-label="Toggle theme" title="Theme">☼</button>
-        <button class="icon-btn" id="reset" type="button" aria-label="Reset current mala" title="Reset">↻</button>
-      </div>
+
+      <!-- Active Naam / Mantra / Chalisa Display -->
+      <section class="chant-hero" aria-live="polite">
+        <div id="chantCategoryTag" class="chant-category">NAAM JAP</div>
+        <h1 id="chantTitle" class="chant-title">RAM</h1>
+        <p id="chantSubtitle" class="chant-subtitle">श्री राम जय राम जय जय राम</p>
+
+        <div id="chalisaControls" class="chalisa-bar hidden">
+          <button id="btnPrevVerse" class="verse-nav-btn" type="button" aria-label="Previous Verse">‹ Prev</button>
+          <span id="verseProgressLabel" class="verse-badge">Verse 1 / 40</span>
+          <button id="btnReadFullChalisa" class="verse-nav-btn accent" type="button">Read Full</button>
+          <button id="btnNextVerse" class="verse-nav-btn" type="button" aria-label="Next Verse">Next ›</button>
+        </div>
+      </section>
     </header>
 
-    <section class="chant">
-      <div class="eyebrow" id="chantType">NAAM JAP</div>
-      <h1 id="chantTitle">RAM</h1>
-      <p id="chantSubtitle">श्री राम जय राम जय जय राम</p>
-    </section>
+    <!-- Interactive FPV Hanging Mala Canvas -->
+    <main class="mala-stage" id="malaStage">
+      <canvas id="malaCanvas" aria-label="Interactive hanging mala with a side-angle view. Slide upward to advance one bead."></canvas>
 
-    <section class="mala-wrap" id="malaStage" aria-label="Interactive hanging mala. Tap or swipe upward to count a bead.">
-      <canvas id="malaCanvas"></canvas>
-      <div class="gesture-hint" id="gestureHint"><span>↑</span><small>SWIPE UP OR TAP</small></div>
-      <div class="toast" id="toast" role="status"></div>
-    </section>
+      <div id="slideCue" class="slide-cue" aria-hidden="true">
+        <div class="cue-arrow">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+        </div>
+        <span>SLIDE UP</span>
+      </div>
 
-    <footer class="dock">
-      <button class="target" id="targetOpen" type="button">
-        <strong id="countDisplay">0</strong><span>/</span><b id="targetDisplay">108</b><small>BEADS</small><span class="chevron">⌃</span>
-      </button>
-      <div class="progress"><span id="progressFill"></span></div>
-      <nav class="materials" aria-label="Mala material">
-        <button class="material active" data-material="rudraksha" type="button"><i class="dot rudra"></i>RUDRAKSHA</button>
-        <button class="material" data-material="tulsi" type="button"><i class="dot tulsi"></i>TULSI</button>
-        <button class="material" data-material="sphatik" type="button"><i class="dot sphatik"></i>SPHATIK</button>
-        <button class="material" data-material="chandan" type="button"><i class="dot chandan"></i>CHANDAN</button>
+      <div id="toastBanner" class="toast-banner" role="status" aria-live="assertive"></div>
+    </main>
+
+    <!-- Bottom Target Count & Mala Material Selector -->
+    <footer class="bottom-dock">
+      <div class="target-row">
+        <button id="btnTargetMenu" class="target-trigger" type="button" aria-label="Choose Total Mala Beads">
+          <span id="targetCountDisplay" class="target-number">108</span>
+          <span class="target-unit">MALA BEADS</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="progress-track" aria-hidden="true">
+          <div id="malaProgressFill" class="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <nav class="material-grid" aria-label="Select Mala Bead Material">
+        <button class="mat-pill active" data-material="rudraksha" type="button">
+          <span class="mat-dot dot-rudraksha"></span>
+          <span>RUDRAKSHA</span>
+        </button>
+        <button class="mat-pill" data-material="tulsi" type="button">
+          <span class="mat-dot dot-tulsi"></span>
+          <span>TULSI</span>
+        </button>
+        <button class="mat-pill" data-material="sphatik" type="button">
+          <span class="mat-dot dot-sphatik"></span>
+          <span>SPHATIK</span>
+        </button>
+        <button class="mat-pill" data-material="chandan" type="button">
+          <span class="mat-dot dot-chandan"></span>
+          <span>CHANDAN</span>
+        </button>
       </nav>
-      <p class="footer-note">A moment of stillness. One bead at a time.</p>
     </footer>
-  </main>
+  </div>
 
-  <dialog id="chantDialog" class="sheet">
-    <form method="dialog" class="sheet-inner">
-      <header><h2>Select your chant</h2><button class="close" aria-label="Close">×</button></header>
-      <div class="tabs">
-        <button type="button" class="tab active" data-tab="naam">Naam Jap</button>
-        <button type="button" class="tab" data-tab="mantra">Mantras</button>
-        <button type="button" class="tab" data-tab="custom">Custom</button>
+  <!-- Chant Selection Modal -->
+  <div id="chantModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="chantModalHeading">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 id="chantModalHeading">Choose Sacred Chant</h2>
+        <button class="modal-close" data-close="chantModal" type="button" aria-label="Close">✕</button>
       </div>
-      <div class="chant-list" id="chantList"></div>
-      <div id="customPanel" class="custom-panel hidden">
-        <label>Chant name<input id="customName" maxlength="42" placeholder="e.g. OM NAMAH SHIVAYA"></label>
-        <label>Subtitle<input id="customSubtitle" maxlength="100" placeholder="Optional Devanagari text"></label>
-        <button class="primary" id="applyCustom" type="button">Use this chant</button>
+
+      <div class="tab-strip" role="tablist">
+        <button class="tab-btn active" data-tab="naam" role="tab" type="button">Naam Jap</button>
+        <button class="tab-btn" data-tab="mantra" role="tab" type="button">Mantras</button>
+        <button class="tab-btn" data-tab="chalisa" role="tab" type="button">Chalisa</button>
+        <button class="tab-btn" data-tab="custom" role="tab" type="button">Custom</button>
       </div>
-    </form>
-  </dialog>
 
-  <dialog id="targetDialog" class="sheet">
-    <form method="dialog" class="sheet-inner">
-      <header><h2>Mala bead count</h2><button class="close" aria-label="Close">×</button></header>
-      <p class="sheet-note">Choose a traditional count or enter your own target.</p>
-      <div class="presets" id="presets"></div>
-      <label class="custom-count">Custom count<input id="customCount" type="number" min="1" max="1008" placeholder="1–1008"></label>
-      <button class="primary" id="applyCount" type="button">Set target</button>
-    </form>
-  </dialog>
+      <div id="tabContentNaam" class="tab-panel">
+        <div id="naamList" class="option-grid"></div>
+      </div>
 
-  <script type="application/json" id="app-config">{"version":"1.0.0","offline":"no external requests"}</script>
+      <div id="tabContentMantra" class="tab-panel hidden">
+        <div id="mantraList" class="option-stack"></div>
+      </div>
+
+      <div id="tabContentChalisa" class="tab-panel hidden">
+        <div id="chalisaList" class="option-stack"></div>
+      </div>
+
+      <div id="tabContentCustom" class="tab-panel hidden">
+        <form id="customChantForm" class="custom-form">
+          <label class="form-label" for="customNameInput">Sacred Name or Mantra Title</label>
+          <input id="customNameInput" class="form-input" type="text" maxlength="40" placeholder="e.g., OM NAMO NARAYANAYA" required />
+          <label class="form-label" for="customSubInput">Subtitle / Devanagari Verse (Optional)</label>
+          <input id="customSubInput" class="form-input" type="text" maxlength="90" placeholder="e.g., ॐ नमो नारायणाय" />
+          <button class="primary-action-btn" type="submit">Apply Custom Chant</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Target Beads Selection Modal -->
+  <div id="targetModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="targetModalHeading">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h2 id="targetModalHeading">Total Mala Beads</h2>
+        <button class="modal-close" data-close="targetModal" type="button" aria-label="Close">✕</button>
+      </div>
+      <p class="modal-note">Each preset physically builds the exact number of counting beads plus 1 Sumeru Guru bead.</p>
+
+      <div id="targetPresetGrid" class="preset-grid"></div>
+
+      <form id="customTargetForm" class="custom-target-row">
+        <input id="customTargetInput" class="form-input" type="number" min="1" max="10008" placeholder="Custom bead count (1 – 10008)" required />
+        <button class="primary-action-btn compact" type="submit">Set</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Full Chalisa Reader Modal -->
+  <div id="readerModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="readerModalHeading">
+    <div class="modal-sheet tall">
+      <div class="modal-header">
+        <h2 id="readerModalHeading">Chalisa Path</h2>
+        <button class="modal-close" data-close="readerModal" type="button" aria-label="Close">✕</button>
+      </div>
+      <div id="readerBody" class="reader-scroll"></div>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
 </body>
 </html>
