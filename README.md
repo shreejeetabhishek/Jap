@@ -1,16 +1,23 @@
-# Divya Jap
+# Divya Jap — Fast Network Build
 
-This project is split from the supplied `divya-jap-rudraksha-organic-3d-1.html` baseline.
+This build preserves the supplied interface and app features while improving first-load behaviour on mobile networks.
+
+## Performance changes
+- The app starts immediately with its built-in Canvas mala and Rudraksha rendering; the counter does not wait for Three.js.
+- Three.js is an optional, delayed enhancement loaded after the first screen is interactive.
+- Data Saver mode skips the optional Three.js download.
+- On constrained connections (2G/3G or reported downlink below 1 Mbps), the optional 3D enhancement is delayed further.
+- The procedural 3D texture, mesh and output sprite are smaller to reduce CPU/GPU work.
+- Canvas device-pixel ratio is capped lower on mobile/low-core devices.
+- The animation loop is capped at about 30 FPS and pauses rendering when the tab is hidden.
 
 ## Files
-- `index.html` — original interface and modal markup
-- `styles.css` — original styling
-- `app.js` — original chanting, counter, mala animation, audio, persistence, and renderer logic
+- `index.html`
+- `styles.css`
+- `app.js`
 
 ## Run
-Open `index.html` in a modern browser. For best results, serve this folder from a local static web server.
+Open `index.html`, or serve this folder using any static web server.
 
-## 3D Rudraksha
-The supplied implementation loads Three.js 0.160.0 from jsDelivr for its detailed procedural Rudraksha model. If the CDN is unavailable, its built-in 2D Rudraksha sprite fallback is used. The rest of the app remains HTML, CSS, and JavaScript.
-
-No redesign or feature rewrite was applied; the source UI and application logic were separated into three files.
+## Network behaviour
+The initial experience requires no remote image, font, or library download. The detailed Three.js Rudraksha enhancement is fetched from jsDelivr later. If that download fails, the built-in Canvas version remains active. Data Saver mode intentionally stays on the Canvas version to avoid consuming mobile data.

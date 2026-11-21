@@ -227,7 +227,7 @@
           this.ctx = canvas.getContext("2d");
           this.width = 360;
           this.height = 560;
-          this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+          this.dpr = Math.min(window.devicePixelRatio || 1, (navigator.connection?.saveData || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) ? 1.25 : 1.75);
 
           this.material = "rudraksha";
           this.targetCount = 108;
@@ -250,7 +250,7 @@
           const rect = this.canvas.parentElement.getBoundingClientRect();
           this.width = Math.max(280, rect.width || window.innerWidth || 360);
           this.height = Math.max(360, rect.height || window.innerHeight * 0.65 || 520);
-          this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+          this.dpr = Math.min(window.devicePixelRatio || 1, (navigator.connection?.saveData || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) ? 1.25 : 1.75);
 
           this.canvas.width = Math.round(this.width * this.dpr);
           this.canvas.height = Math.round(this.height * this.dpr);
@@ -271,13 +271,13 @@
             this._threeDReady = true;
             try {
               const THREE = window.THREE;
-              const SIZE = 640;
+              const SIZE = 512;
               const scene = new THREE.Scene();
               const camera = new THREE.PerspectiveCamera(31, 1, 0.1, 30);
               camera.position.set(0.16, 0.10, 4.55);
 
               const gl = new THREE.WebGLRenderer({
-                alpha: true, antialias: true, preserveDrawingBuffer: true,
+                alpha: true, antialias: false, preserveDrawingBuffer: false,
                 powerPreference: "high-performance"
               });
               gl.setPixelRatio(1);
@@ -286,7 +286,7 @@
               gl.outputColorSpace = THREE.SRGBColorSpace;
               gl.toneMapping = THREE.ACESFilmicToneMapping;
               gl.toneMappingExposure = 1.08;
-              gl.shadowMap.enabled = true;
+              gl.shadowMap.enabled = false;
               gl.shadowMap.type = THREE.PCFSoftShadowMap;
 
               scene.add(new THREE.HemisphereLight(0xffe0c4, 0x1b0904, 1.45));
@@ -306,7 +306,7 @@
 
               // Build seamless procedural PBR maps: mottled seed color, high-frequency
               // dry woody relief, tiny pits, and a roughness map (not a glossy wood finish).
-              const TEX_W = 1024, TEX_H = 512;
+              const TEX_W = 768, TEX_H = 384;
               const colorCanvas = document.createElement("canvas");
               const bumpCanvas = document.createElement("canvas");
               const roughCanvas = document.createElement("canvas");
@@ -402,7 +402,7 @@
               const roughnessMap = new THREE.CanvasTexture(roughCanvas);
               roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
 
-              const rows = 224, cols = 320;
+              const rows = 160, cols = 224;
               const positions = [], uvs = [], indices = [];
 
               // Real Rudraksha is not a smooth five-sided wooden ball. Its surface
@@ -491,8 +491,8 @@
               const group = new THREE.Group();
               const seed = new THREE.Mesh(geo, seedMaterial);
               seed.rotation.set(0.17, -0.24, 0.055);
-              seed.castShadow = true;
-              seed.receiveShadow = true;
+              seed.castShadow = false;
+              seed.receiveShadow = false;
               group.add(seed);
 
               // Five recessed, gently irregular mukhi seams follow the true surface.
@@ -568,13 +568,40 @@
 
           if (window.THREE) { build(); return; }
           if (document.querySelector('script[data-divya-three]')) return;
-          const script = document.createElement("script");
-          script.src = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js";
-          script.async = true;
-          script.dataset.divyaThree = "1";
-          script.onload = build;
-          script.onerror = () => console.warn("Three.js unavailable; using built-in Rudraksha rendering.");
-          document.head.appendChild(script);
+
+          // The counter is fully usable with the built-in Canvas bead while Three.js
+          // downloads. Delay the optional 3D enhancement until after first paint.
+          const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          if (connection?.saveData) return;
+
+          const effectiveType = connection?.effectiveType || "4g";
+          const downlink = Number(connection?.downlink || 0);
+          const isConstrained = effectiveType === "slow-2g" || effectiveType === "2g" ||
+            effectiveType === "3g" || (downlink > 0 && downlink < 1.0);
+          const waitMs = isConstrained ? 12000 : 4500;
+
+          const loadThree = () => {
+            if (document.hidden || window.THREE || document.querySelector('script[data-divya-three]')) return;
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js";
+            script.async = true;
+            script.dataset.divyaThree = "1";
+            script.onload = build;
+            script.onerror = () => {
+              script.remove();
+              console.warn("Three.js unavailable; continuing with built-in Rudraksha rendering.");
+            };
+            document.head.appendChild(script);
+          };
+
+          const scheduleLoad = () => {
+            if ("requestIdleCallback" in window) {
+              requestIdleCallback(loadThree, { timeout: waitMs + 4000 });
+            } else {
+              window.setTimeout(loadThree, waitMs);
+            }
+          };
+          window.setTimeout(scheduleLoad, waitMs);
         }
 
         // Deterministic pseudo-random helper for organic texture generation
@@ -1444,12 +1471,21 @@
       updateUI();
 
       let lastTime = performance.now();
+      let lastFrame = 0;
       function loop(now) {
+        requestAnimationFrame(loop);
+        if (document.hidden || now - lastFrame < 33) return;
         const dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
+        lastFrame = now;
         renderer.updatePhysics(dt);
         renderer.render();
-        requestAnimationFrame(loop);
       }
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          lastTime = performance.now();
+          renderer.render();
+        }
+      });
       requestAnimationFrame(loop);
     })();
