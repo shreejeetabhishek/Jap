@@ -47,3 +47,14 @@ The enhanced Rudraksha renderer loads Three.js `0.160.0` from jsDelivr at runtim
 ## Notes
 
 This is based on the last agreed visually good Rudraksha V2 baseline. HTML, CSS and JavaScript are separate root-level files. No framework or bundler is required.
+
+
+## Rendering architecture (prototype milestone)
+
+- `app.js` owns application state, chant selection, counting, persistence, audio, and UI events.
+- `mala-renderer.js` owns the hanging mala geometry, bead rendering, sway/tassel motion, and material appearance.
+- `styles.css` and `index.html` own presentation and markup.
+
+The Rudraksha bead currently uses the detailed Three.js-generated 3D prototype (with procedural color, relief/bump and roughness maps, five longitudinal grooves, seed nodules and bore details). Tulsi, Chandan and Sphatik remain on their existing fallback bead treatments in this milestone; they are intentionally not represented as finished photoreal 3D materials yet.
+
+Three.js is loaded from jsDelivr at runtime. If WebGL/Three.js is unavailable, the renderer falls back to its built-in canvas bead artwork.
