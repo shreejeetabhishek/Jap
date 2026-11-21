@@ -11,7 +11,9 @@
           { id: "ishwar", title: "ISHWAR", subtitle: "ईश्वर सत्य है • ॐ तत् सत्" },
           { id: "radha", title: "RADHA", subtitle: "श्री राधे राधे • राधा वल्लभ श्री हरिवंश" },
           { id: "krishna", title: "KRISHNA", subtitle: "हरे कृष्ण हरे राम • कृष्णाय वासुदेवाय" },
-          { id: "durga", title: "DURGA", subtitle: "ॐ ऐं ह्रीं क्लीं चामुण्डायै विच्चे" }
+          { id: "durga", title: "DURGA", subtitle: "ॐ ऐं ह्रीं क्लीं चामुण्डायै विच्चे" },
+          { id: "anukul_radhaswami", title: "RADHASWAMI — SATSANG", subtitle: "श्री श्री ठाकुर अनुकूलचन्द्र • प्रार्थना में उल्लिखित नाम-स्मरण" },
+          { id: "mother_ma", title: "MA — THE MOTHER", subtitle: "श्री माँ • श्री अरविन्द आश्रम की The Mother (Mirra Alfassa) का स्मरण" }
         ],
         mantras: [
           {
@@ -38,6 +40,21 @@
             id: "ganesh",
             title: "GANESH MANTRA",
             subtitle: "ॐ गं गणपतये नमः • वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ"
+          },
+          {
+            id: "sri_aurobindo_saranam",
+            title: "SRI AUROBINDO SARANAM MAMA",
+            subtitle: "श्री अरविन्द शरणं मम • श्री अरविन्द एवं The Mother से सम्बद्ध devotional invocation"
+          },
+          {
+            id: "om_namo_bhagavate",
+            title: "OM NAMO BHAGAVATE",
+            subtitle: "ॐ नमो भगवते • श्री अरविन्द की साधना-साहित्य में उल्लिखित invocation"
+          },
+          {
+            id: "om_namo_bhagavate_aravindaya",
+            title: "OM NAMO BHAGAVATE SRI ARAVINDAYA",
+            subtitle: "ॐ नमो भगवते श्री अरविन्दाय • श्री अरविन्द से सम्बद्ध devotional invocation"
           }
         ],
         chalisas: [
@@ -306,7 +323,7 @@
 
               // Build seamless procedural PBR maps: mottled seed color, high-frequency
               // dry woody relief, tiny pits, and a roughness map (not a glossy wood finish).
-              const TEX_W = 768, TEX_H = 384;
+              const TEX_W = 896, TEX_H = 448;
               const colorCanvas = document.createElement("canvas");
               const bumpCanvas = document.createElement("canvas");
               const roughCanvas = document.createElement("canvas");
@@ -370,7 +387,7 @@
               roughCtx.putImageData(roughImage, 0, 0);
 
               // Scatter small irregular pits with a raised lip and dark recessed centre.
-              for (let p = 0; p < 720; p++) {
+              for (let p = 0; p < 1050; p++) {
                 const px = hash(p, 11) * TEX_W;
                 const py = hash(p, 19) * TEX_H;
                 const radius = 0.65 + hash(p, 23) * 2.25;
@@ -402,7 +419,7 @@
               const roughnessMap = new THREE.CanvasTexture(roughCanvas);
               roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
 
-              const rows = 160, cols = 224;
+              const rows = 176, cols = 240;
               const positions = [], uvs = [], indices = [];
 
               // Real Rudraksha is not a smooth five-sided wooden ball. Its surface
@@ -410,14 +427,14 @@
               // deep, winding mukhi clefts. Distribute those protuberances over the
               // seed and displace the actual mesh (not detached decorative spheres).
               const wartFeatures = [];
-              for (let i = 0; i < 138; i++) {
-                const y = 1 - 2 * ((i + 0.5) / 138);
+              for (let i = 0; i < 196; i++) {
+                const y = 1 - 2 * ((i + 0.5) / 196);
                 const phi = Math.acos(Math.max(-1, Math.min(1, y)));
                 const theta = (i * 2.399963229728653) % (Math.PI * 2);
                 wartFeatures.push({
                   phi, theta,
-                  radius: 0.075 + hash(i, 61) * 0.075,
-                  height: 0.018 + hash(i, 67) * 0.036,
+                  radius: 0.060 + hash(i, 61) * 0.092,
+                  height: 0.020 + hash(i, 67) * 0.041,
                   phase: hash(i, 71) * Math.PI * 2
                 });
               }
@@ -447,11 +464,12 @@
                   }
                 }
                 const fine =
-                  Math.sin(19 * theta + 13 * phi) * Math.sin(11 * phi + 0.6) * 0.006
-                  + Math.sin(43 * theta - 27 * phi) * Math.sin(17 * phi + theta) * 0.0035
-                  + Math.sin(89 * theta + 57 * phi) * 0.0018;
-                const channelDepth = 0.052 * cleft * Math.pow(sp, 0.58);
-                const broadLobes = 0.105 * ridge * Math.pow(sp, 0.72);
+                  Math.sin(19 * theta + 13 * phi) * Math.sin(11 * phi + 0.6) * 0.008
+                  + Math.sin(43 * theta - 27 * phi) * Math.sin(17 * phi + theta) * 0.0048
+                  + Math.sin(89 * theta + 57 * phi) * 0.0024
+                  + Math.sin(137 * theta + 91 * phi) * 0.0011;
+                const channelDepth = 0.071 * cleft * Math.pow(sp, 0.58);
+                const broadLobes = 0.118 * ridge * Math.pow(sp, 0.72);
                 const poleIrregularity = 0.018 * Math.sin(theta * 3 + 0.7) * Math.pow(Math.abs(cp), 6);
                 const r = 1 + broadLobes - channelDepth + wartRelief + fine + poleIrregularity + extra;
                 return new THREE.Vector3(
@@ -578,7 +596,7 @@
           const downlink = Number(connection?.downlink || 0);
           const isConstrained = effectiveType === "slow-2g" || effectiveType === "2g" ||
             effectiveType === "3g" || (downlink > 0 && downlink < 1.0);
-          const waitMs = isConstrained ? 12000 : 4500;
+          const waitMs = isConstrained ? 12000 : 1100;
 
           const loadThree = () => {
             if (document.hidden || window.THREE || document.querySelector('script[data-divya-three]')) return;
@@ -718,6 +736,41 @@
                 ? "rgba(255, 190, 137, 0.20)"
                 : "rgba(24, 7, 2, 0.30)";
               c.fill();
+            }
+
+            // Layered organic Rudraksha relief for the immediate first-paint sprite.
+            // The highlights and recessed shadows are clipped to the seed silhouette.
+            for (let w = 0; w < 92; w++) {
+              const a = this.hash2d(w, 31.7) * Math.PI * 2;
+              const rr = Math.sqrt(this.hash2d(w, 43.9)) * baseR * 0.76;
+              const wx = cx + Math.cos(a) * rr;
+              const wy = cy + Math.sin(a) * rr;
+              const wr = 2.2 + this.hash2d(w, 57.1) * 7.2;
+              const warp = this.hash2d(w, 69.3) * 0.8 + 0.2;
+              const shade = c.createRadialGradient(wx - wr * 0.28, wy - wr * 0.34, wr * 0.08, wx, wy, wr);
+              shade.addColorStop(0, `rgba(224,145,91,${0.10 * warp})`);
+              shade.addColorStop(0.48, `rgba(93,34,13,${0.12 * warp})`);
+              shade.addColorStop(0.78, `rgba(27,7,2,${0.30 * warp})`);
+              shade.addColorStop(1, 'rgba(20,5,1,0)');
+              c.fillStyle = shade;
+              c.beginPath(); c.ellipse(wx, wy, wr * (0.72 + warp * 0.25), wr, a, 0, Math.PI * 2); c.fill();
+              c.beginPath();
+              c.ellipse(wx - wr * 0.13, wy - wr * 0.20, wr * 0.52, wr * 0.27, a, Math.PI * 1.05, Math.PI * 1.88);
+              c.strokeStyle = `rgba(244,174,119,${0.13 * warp})`;
+              c.lineWidth = Math.max(0.7, wr * 0.13); c.stroke();
+            }
+
+            // Fine branching fissures and short weathered fibres, not regular stripes.
+            for (let k = 0; k < 44; k++) {
+              const a = this.hash2d(k, 81.2) * Math.PI * 2;
+              const rr = Math.sqrt(this.hash2d(k, 92.4)) * baseR * 0.78;
+              const sx = cx + Math.cos(a) * rr;
+              const sy = cy + Math.sin(a) * rr;
+              const len = 5 + this.hash2d(k, 103.6) * 13;
+              c.beginPath(); c.moveTo(sx, sy);
+              c.quadraticCurveTo(sx + Math.cos(a + 0.7) * len * 0.45, sy + Math.sin(a + 0.7) * len * 0.45, sx + Math.cos(a + 0.18) * len, sy + Math.sin(a + 0.18) * len);
+              c.strokeStyle = k % 3 === 0 ? 'rgba(16,5,2,0.26)' : 'rgba(231,157,105,0.12)';
+              c.lineWidth = 0.55 + this.hash2d(k, 114.8) * 0.75; c.stroke();
             }
 
             // Small natural thread aperture at the top pole.
@@ -1082,6 +1135,16 @@
           Object.assign(state, saved);
         }
       } catch (_) {}
+
+      // First launch after the detailed Rudraksha update: show Rudraksha by default
+      // once, even if an older build had another bead selected. Preserve all counts.
+      try {
+        const detailDefaultKey = "divya_jap_detailed_rudraksha_default_v1";
+        if (!localStorage.getItem(detailDefaultKey)) {
+          state.material = "rudraksha";
+          localStorage.setItem(detailDefaultKey, "1");
+        }
+      } catch (_) { state.material = "rudraksha"; }
 
       function saveState() {
         try {

@@ -21,3 +21,8 @@ Open `index.html`, or serve this folder using any static web server.
 
 ## Network behaviour
 The initial experience requires no remote image, font, or library download. The detailed Three.js Rudraksha enhancement is fetched from jsDelivr later. If that download fails, the built-in Canvas version remains active. Data Saver mode intentionally stays on the Canvas version to avoid consuming mobile data.
+
+
+## Expanded devotional chant catalogue
+
+This build adds a small Sri Aurobindo & The Mother (Mirra Alfassa) selection: “Ma”, “Sri Aurobindo Saranam Mama”, “Om Namo Bhagavate”, and “Om Namo Bhagavate Sri Aravindaya”. It also adds a Satsang/Thakur Anukulchandra Radhaswami remembrance entry. These are presented as devotional selections/invocations, not as universally prescribed or initiation-required practices. Radha Soami initiation-specific Simran words are intentionally not supplied; users should follow the instructions of their own tradition or authorised teacher.
