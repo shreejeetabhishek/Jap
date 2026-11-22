@@ -272,7 +272,7 @@
           this.height = 560;
           this.dpr = Math.min(window.devicePixelRatio || 1, (navigator.connection?.saveData || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) ? 1.25 : 1.75);
 
-          this.material = "rudraksha";
+          this.material = "tulsi";
           this.targetCount = 108;
           this.currentCount = 0;
           this.countMode = "up";
@@ -969,7 +969,7 @@
         chantSubtitle: "श्री राम जय राम जय जय राम",
         chalisaId: "hanuman_chalisa",
         verseIndex: 0,
-        material: "rudraksha",
+        material: "tulsi",
         targetCount: 108,
         sankalpaMalas: 3,
         currentCount: 0,
@@ -1145,12 +1145,12 @@
       } catch (_) {}
 
       try {
-        const detailDefaultKey = "divya_jap_detailed_rudraksha_default_v1";
-        if (!localStorage.getItem(detailDefaultKey)) {
-          state.material = "rudraksha";
-          localStorage.setItem(detailDefaultKey, "1");
+        const tulsiDefaultKey = "divya_jap_tulsi_default_v1";
+        if (!localStorage.getItem(tulsiDefaultKey)) {
+          state.material = "tulsi";
+          localStorage.setItem(tulsiDefaultKey, "1");
         }
-      } catch (_) { state.material = "rudraksha"; }
+      } catch (_) { state.material = "tulsi"; }
 
       function saveState() {
         try {
