@@ -751,10 +751,10 @@
           ctx.rotate(angle * 0.85);
           ctx.lineCap = "round";
 
-          // Draw 28 fine silken jhalar threads in 2 depth layers (rich saffron-crimson back, golden-saffron front)
+          // Draw 35 fine silken jhalar threads in 2 depth layers (18 rich saffron-crimson back, 17 golden-saffron front)
           const layers = [
-            { count: 14, width: 1.55, colors: ["#8f2f0d", "#a83d14", "#b84e18"], lenScale: 1.03, alpha: 0.92 },
-            { count: 14, width: 1.15, colors: ["#d96e1f", "#ea8a2e", "#f4b95a"], lenScale: 0.96, alpha: 0.95 }
+            { count: 18, width: 1.35, colors: ["#8f2f0d", "#a83d14", "#b84e18"], lenScale: 1.03, alpha: 0.92 },
+            { count: 17, width: 1.0, colors: ["#d96e1f", "#ea8a2e", "#f4b95a"], lenScale: 0.96, alpha: 0.95 }
           ];
 
           layers.forEach((layer, layerIdx) => {
