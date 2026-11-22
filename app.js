@@ -290,6 +290,8 @@
           this.targetTiltX = 0;
           this.tasselAngle = 0;
           this.tasselVelocity = 0;
+          this.windTime = Math.random() * 10;
+          this.windGust = 0;
 
           this.beadSprites = {};
           this.buildAllBeadSprites();
@@ -576,7 +578,7 @@
           this.beadLift = Math.max(this.beadLift, 26);
           this.beadLiftVel = 165;
           this.swayVelocity += (Math.random() - 0.5) * 0.018;
-          this.tasselVelocity += 0.035;
+          this.tasselVelocity += 0.24 + (Math.random() - 0.5) * 0.12;
           return this.currentCount >= this.targetCount;
         }
 
@@ -648,8 +650,17 @@
           this.swayVelocity = (this.swayVelocity + accel * dt) * damping;
           this.swayAngle += this.swayVelocity * dt;
 
-          const tasselAccel = -20 * (this.tasselAngle - this.swayAngle * 1.45);
-          this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * 0.88;
+          // Continuous organic wind breeze so the silken jhalar always breathes & ripples naturally
+          this.windTime += dt;
+          const breeze =
+            Math.sin(this.windTime * 1.35) * 0.11 +
+            Math.sin(this.windTime * 2.45 + 1.2) * 0.055 +
+            Math.sin(this.windTime * 0.55 + 0.4) * 0.06;
+          this.windGust = breeze;
+
+          const targetTasselAngle = this.swayAngle * 1.45 + breeze;
+          const tasselAccel = -16 * (this.tasselAngle - targetTasselAngle);
+          this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * 0.90;
           this.tasselAngle += this.tasselVelocity * dt;
 
           // Smooth spring return for the main bead's upward slide motion
@@ -669,30 +680,84 @@
         }
 
         drawSilkenTassel(ctx, x, y, scale, angle) {
-          const len = 36 * scale;
-          const spread = 12 * scale;
+          const baseLen = 46 * scale;
+          const baseSpread = 13.5 * scale;
+          const wt = this.windTime || 0;
+          const gust = this.windGust || 0;
+          const velTrail = Math.max(-0.6, Math.min(0.6, -(this.tasselVelocity || 0) * 0.35));
 
           ctx.save();
           ctx.translate(x, y);
-          ctx.rotate(angle);
+          ctx.rotate(angle * 0.72);
+          ctx.lineCap = "round";
 
-          ctx.fillStyle = "#c9852c";
+          // Draw 28 fine silken jhalar threads in 2 depth layers (rich saffron-crimson back, golden-saffron front)
+          const layers = [
+            { count: 14, width: 1.55, colors: ["#8f2f0d", "#a83d14", "#b84e18"], lenScale: 1.03, alpha: 0.92 },
+            { count: 14, width: 1.15, colors: ["#d96e1f", "#ea8a2e", "#f4b95a"], lenScale: 0.96, alpha: 0.95 }
+          ];
+
+          layers.forEach((layer, layerIdx) => {
+            ctx.globalAlpha = layer.alpha;
+            for (let i = 0; i < layer.count; i++) {
+              const t = (i / (layer.count - 1)) * 2 - 1; // -1 to +1
+              const seed = i * 1.73 + layerIdx * 7.1;
+
+              // Natural slight unevenness in hand-cut silk thread lengths
+              const lenVar = 0.88 + 0.18 * (0.5 + 0.5 * Math.sin(seed * 3.7));
+              const len = baseLen * layer.lenScale * lenVar;
+
+              // Traveling wind ripple along each silk strand (gentle at mid-section, fluid flutter at tips)
+              const wavePhase = wt * 2.55 - Math.abs(t) * 0.7 + i * 0.36 + layerIdx * 1.1;
+              const midWave = (Math.sin(wavePhase) * 3.4 + gust * 18 + velTrail * 12) * scale;
+              const tipWave = (Math.sin(wavePhase - 0.95) * 6.8 + Math.sin(wt * 4.1 + seed) * 1.9 + gust * 34 + velTrail * 24) * scale;
+
+              // Outer threads flare slightly more in the breeze while inner threads stay cohesive
+              const flutterSpread = 1.0 + Math.sin(wt * 1.8 + seed) * 0.10;
+              const startX = t * 3.6 * scale;
+              const startY = 5.5 * scale;
+
+              const cp1x = t * baseSpread * 0.42 * flutterSpread + midWave * 0.65;
+              const cp1y = startY + len * 0.34;
+              const cp2x = t * baseSpread * 0.78 * flutterSpread + midWave * 1.15;
+              const cp2y = startY + len * 0.70;
+              const endX = t * baseSpread * flutterSpread + tipWave;
+              const endY = startY + len - Math.abs(tipWave) * 0.12;
+
+              ctx.beginPath();
+              ctx.moveTo(startX, startY);
+              ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+              ctx.strokeStyle = layer.colors[i % layer.colors.length];
+              ctx.lineWidth = layer.width * scale;
+              ctx.stroke();
+            }
+          });
+
+          ctx.globalAlpha = 1;
+
+          // Hand-wrapped silk Brahma knot & woven golden-saffron cap on top of strands
+          const capGrad = ctx.createLinearGradient(-5.5 * scale, 0, 5.5 * scale, 0);
+          capGrad.addColorStop(0, "#7c3210");
+          capGrad.addColorStop(0.35, "#d88a2e");
+          capGrad.addColorStop(0.65, "#f5c570");
+          capGrad.addColorStop(1, "#7c3210");
+          ctx.fillStyle = capGrad;
           ctx.beginPath();
-          ctx.roundRect(-5 * scale, -1 * scale, 10 * scale, 7 * scale, 2.5 * scale);
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(-5.2 * scale, -1.2 * scale, 10.4 * scale, 7.6 * scale, 2.8 * scale);
+          } else {
+            ctx.rect(-5.2 * scale, -1.2 * scale, 10.4 * scale, 7.6 * scale);
+          }
           ctx.fill();
 
-          ctx.strokeStyle = "#f2c272";
-          ctx.lineWidth = 1.1 * scale;
-          ctx.strokeRect(-4.5 * scale, 1.5 * scale, 9 * scale, 2 * scale);
-
-          const strands = 17;
-          for (let i = 0; i < strands; i++) {
-            const t = (i / (strands - 1)) * 2 - 1;
+          // Fine golden zari binding wraps around the knot collar
+          ctx.strokeStyle = "#f9d68e";
+          ctx.lineWidth = 1.0 * scale;
+          for (let w = 0; w < 3; w++) {
+            const wy = (1.1 + w * 1.9) * scale;
             ctx.beginPath();
-            ctx.moveTo(t * 3.5 * scale, 5.5 * scale);
-            ctx.quadraticCurveTo(t * spread * 0.62, len * 0.55, t * spread, len);
-            ctx.strokeStyle = i % 2 === 0 ? "#c8681c" : "#e89e42";
-            ctx.lineWidth = 1.25 * scale;
+            ctx.moveTo(-4.8 * scale, wy);
+            ctx.lineTo(4.8 * scale, wy);
             ctx.stroke();
           }
 
