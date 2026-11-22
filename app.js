@@ -134,8 +134,7 @@
             ]
           }
         ],
-        targetPresets: [3, 5, 7, 8, 9, 11, 13, 108, 1008]
-      };
+        targetPresets: [3, 5, 7, 8, 9, 11, 13, 108, 1008],
         i18n: {
           en: {
             chant: "Chant",
