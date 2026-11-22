@@ -42,3 +42,4 @@ This build adds a small Sri Aurobindo & The Mother (Mirra Alfassa) selection: â€
 - **Photorealistic Embedded Rudraksha Sprite**: Replaced the heavy Three.js 3D generator with an instant, zero-network embedded WebP sprite of the real Rudraksha beadâ€”eliminating ~600 KB of external JS and giving crisp photographic detail from Frame 0.
 - **Fluid Wind-Swept Silken Jhalar**: Upgraded the Sumeru tassel with 35 layered saffron-gold silk strands, continuous multi-harmonic ambient breeze physics, traveling cubic-Bezier ripples along the tips, and a zari-wrapped knot collar.
 - **Photorealistic Embedded Tulsi Sprite**: Added an instant, zero-network embedded WebP sprite of the real Tulsi bead with natural wood grain and top bore.
+- **Photorealistic Embedded Chandan Sprite**: Added an instant, zero-network embedded WebP sprite of the real Chandan (sandalwood) bead with natural swirling wood grain.
