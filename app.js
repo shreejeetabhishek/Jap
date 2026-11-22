@@ -609,8 +609,8 @@
         advanceOneBead() {
           this.currentCount += 1;
           this.targetAdvanceOffset += 1;
-          // Slide the main counting bead smoothly upward on every tap or upward slide
-          this.beadLift = Math.max(this.beadLift, 26);
+          // Smooth upward slide on every bead advance (critically damped so no double-bounce)
+          this.beadLift = Math.max(this.beadLift, 28);
           this.beadLiftVel = 165;
           this.swayVelocity += (Math.random() - 0.5) * 0.018;
           // Smooth vertical silk spring bounce on slide-up/tap + subtle gentle sway
@@ -743,16 +743,16 @@
           // Subtle elastic silk-strand length stretch coupled to vertical spring bounce
           this.tasselStretch = Math.max(-0.08, Math.min(0.14, this.tasselBounceY * 0.016));
 
-          // Smooth spring return for the main bead's upward slide motion
-          const liftSpring = -110 * this.beadLift - 16 * this.beadLiftVel;
-          this.beadLiftVel += liftSpring * dt;
+          // Critically damped upward slide (zero bounce): glides smoothly up & settles cleanly
+          const liftAccel = -165 * this.beadLift - 26 * this.beadLiftVel;
+          this.beadLiftVel += liftAccel * dt;
           this.beadLift += this.beadLiftVel * dt;
-          if (this.beadLift < 0) {
+          if (this.beadLift < 0.05) {
             this.beadLift = 0;
             this.beadLiftVel = 0;
-          } else if (this.beadLift > 44) {
-            this.beadLift = 44;
-            this.beadLiftVel = Math.min(0, this.beadLiftVel);
+          } else if (this.beadLift > 46) {
+            this.beadLift = 46;
+            if (this.beadLiftVel > 0) this.beadLiftVel = 0;
           }
 
           const targetTouch = this.isTouching ? 1 : 0;
@@ -932,7 +932,9 @@
           // painted over by the numbered bead while leaving beads visible above
           // and below it.
           const cx = dims.centerX + this.swayAngle * 10;
-          const totalLift = pullFraction * 38 + this.beadLift + this.touchLiftCurrent * 8;
+          const rawLift = pullFraction * 44 + this.beadLift + this.touchLiftCurrent * 16;
+          const maxSafeLift = Math.max(24, dims.centerY - dims.primaryR * 1.05);
+          const totalLift = Math.min(maxSafeLift, rawLift);
           const cy = dims.centerY - totalLift;
           const pr = dims.primaryR;
 
@@ -1282,8 +1284,66 @@
         return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
       }
 
+
+      const CHANT_MOTIFS = {
+        shiva: {
+          color: "#63b3ed",
+          glow: "rgba(74, 158, 224, 0.34)",
+          lightGlow: "rgba(42, 128, 204, 0.44)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%2363b3ed' stroke-width='1.5'><circle cx='120' cy='120' r='96' stroke-dasharray='4 6'/><circle cx='120' cy='120' r='72'/><path d='M120 42 L120 198'/><path d='M92 66 Q92 108 120 108 Q148 108 148 66'/><path d='M78 82 Q78 124 120 124 Q162 124 162 82'/><path d='M86 164 Q120 194 154 164 Q120 176 86 164 Z'/></svg>`
+        },
+        krishna: {
+          color: "#4fd1c5",
+          glow: "rgba(45, 185, 172, 0.34)",
+          lightGlow: "rgba(24, 145, 134, 0.44)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%234fd1c5' stroke-width='1.5'><circle cx='120' cy='120' r='96' stroke-dasharray='3 6'/><circle cx='120' cy='120' r='68'/><line x1='38' y1='154' x2='202' y2='86' stroke-width='2.2'/><circle cx='92' cy='132' r='2.5' fill='%234fd1c5'/><circle cx='116' cy='122' r='2.5' fill='%234fd1c5'/><circle cx='140' cy='112' r='2.5' fill='%234fd1c5'/><path d='M120 34 Q144 62 120 88 Q96 62 120 34 Z'/></svg>`
+        },
+        radha: {
+          color: "#f687b3",
+          glow: "rgba(232, 108, 162, 0.34)",
+          lightGlow: "rgba(208, 72, 132, 0.44)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%23f687b3' stroke-width='1.5'><circle cx='120' cy='120' r='96' stroke-dasharray='4 6'/><circle cx='120' cy='120' r='70'/><ellipse cx='120' cy='84' rx='18' ry='32'/><ellipse cx='120' cy='156' rx='18' ry='32'/><ellipse cx='84' cy='120' rx='32' ry='18'/><ellipse cx='156' cy='120' rx='32' ry='18'/><circle cx='120' cy='120' r='14'/></svg>`
+        },
+        durga: {
+          color: "#f56565",
+          glow: "rgba(235, 82, 72, 0.34)",
+          lightGlow: "rgba(204, 52, 44, 0.44)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%23f56565' stroke-width='1.5'><circle cx='120' cy='120' r='96' stroke-dasharray='4 6'/><polygon points='120,44 188,164 52,164'/><polygon points='120,196 188,76 52,76'/><circle cx='120' cy='120' r='26'/></svg>`
+        },
+        hanuman_chalisa: {
+          color: "#ed8936",
+          glow: "rgba(237, 120, 38, 0.38)",
+          lightGlow: "rgba(218, 96, 18, 0.48)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%23ed8936' stroke-width='1.5'><circle cx='120' cy='120' r='96' stroke-dasharray='4 6'/><line x1='120' y1='42' x2='120' y2='202' stroke-width='2.2'/><rect x='96' y='40' width='48' height='26' rx='8'/><rect x='102' y='184' width='36' height='18' rx='6'/></svg>`
+        },
+        gayatri: {
+          color: "#f6ad55",
+          glow: "rgba(246, 168, 52, 0.38)",
+          lightGlow: "rgba(224, 138, 18, 0.50)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%23f6ad55' stroke-width='1.5'><circle cx='120' cy='120' r='52'/><circle cx='120' cy='120' r='94' stroke-dasharray='5 7'/><line x1='120' y1='16' x2='120' y2='48'/><line x1='120' y1='192' x2='120' y2='224'/><line x1='16' y1='120' x2='48' y2='120'/><line x1='192' y1='120' x2='224' y2='120'/><line x1='46' y1='46' x2='70' y2='70'/><line x1='170' y1='170' x2='194' y2='194'/><line x1='194' y1='46' x2='170' y2='70'/><line x1='70' y1='170' x2='46' y2='194'/></svg>`
+        },
+        default: {
+          color: "#f0b865",
+          glow: "rgba(245, 132, 36, 0.34)",
+          lightGlow: "rgba(236, 138, 28, 0.48)",
+          svg: `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 240' fill='none' stroke='%23f0b865' stroke-width='1.5'><circle cx='120' cy='120' r='96' stroke-dasharray='4 6'/><circle cx='120' cy='120' r='70'/><circle cx='120' cy='120' r='44'/><line x1='120' y1='24' x2='120' y2='216' stroke-dasharray='2 8'/><line x1='24' y1='120' x2='216' y2='120' stroke-dasharray='2 8'/></svg>`
+        }
+      };
+
+      function syncChantBackground() {
+        const bgEl = document.getElementById("chantBgArt");
+        if (!bgEl) return;
+        const key = state.category === "chalisa" ? state.chalisaId : state.chantId;
+        const motif = CHANT_MOTIFS[key] || CHANT_MOTIFS.default;
+        bgEl.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(motif.svg)}")`;
+        document.documentElement.style.setProperty("--bg-art-tint", motif.color);
+        const activeGlow = state.theme === "light" ? motif.lightGlow : motif.glow;
+        document.documentElement.style.setProperty("--accent-glow", activeGlow);
+      }
+
       function updateUI() {
         document.documentElement.setAttribute("data-theme", state.theme);
+        syncChantBackground();
         renderer.countMode = state.countMode;
         renderer.numeralScript = state.numeralScript;
 
@@ -1482,6 +1542,8 @@
         hasTriggeredInGesture = false;
         renderer.dragPull = 0;
         renderer.isTouching = true;
+        renderer.beadLift = Math.max(renderer.beadLift, 16);
+        renderer.beadLiftVel = Math.max(renderer.beadLiftVel, 110);
         renderer.tasselBounceVel -= 26;
         renderer.tasselVelocity += (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.14);
         renderer.silkEnergyTarget = Math.min(0.55, renderer.silkEnergyTarget + 0.30);
