@@ -582,9 +582,9 @@
           this.beadLift = Math.max(this.beadLift, 26);
           this.beadLiftVel = 165;
           this.swayVelocity += (Math.random() - 0.5) * 0.018;
-          const swingDir = Math.random() < 0.5 ? -1 : 1;
-          this.tasselVelocity += swingDir * (0.45 + Math.random() * 0.35);
-          this.silkEnergy = Math.min(1.0, this.silkEnergy + 0.85);
+          const swingDir = this.tasselAngle >= 0 ? -1 : 1;
+          this.tasselVelocity += swingDir * (2.6 + Math.random() * 1.4);
+          this.silkEnergy = 1.0;
           return this.currentCount >= this.targetCount;
         }
 
@@ -656,29 +656,31 @@
           this.swayVelocity = (this.swayVelocity + accel * dt) * damping;
           this.swayAngle += this.swayVelocity * dt;
 
-          // Natural temple-room air: mostly still or very slow micro-drift, with occasional gentle gusts
+          // Natural temple-room air: calm at rest with occasional gentle, visible breeze gusts
           this.windTime += dt;
           this.gustTimer -= dt;
           if (this.gustTimer <= 0) {
-            this.gustTimer = 7 + Math.random() * 9;
+            this.gustTimer = 6 + Math.random() * 7;
             this.gustDir = Math.random() < 0.5 ? -1 : 1;
-            this.gustStrength = 0.05 + Math.random() * 0.06;
-            this.silkEnergy = Math.max(this.silkEnergy, 0.35);
+            this.gustStrength = 0.24 + Math.random() * 0.14;
+            this.tasselVelocity += this.gustDir * (0.9 + Math.random() * 0.5);
+            this.silkEnergy = Math.max(this.silkEnergy, 0.65);
           }
-          // Smoothly fade the occasional gust back to stillness
-          this.gustStrength *= Math.pow(0.45, dt);
-          const slowDrift = Math.sin(this.windTime * 0.42) * 0.014;
-          const activeGust = this.gustDir * this.gustStrength * Math.sin(this.windTime * 1.4);
+          // Smoothly fade the occasional gust back to calm stillness
+          this.gustStrength *= Math.pow(0.52, dt);
+          const slowDrift = Math.sin(this.windTime * 0.55) * 0.025;
+          const activeGust = this.gustDir * this.gustStrength * Math.sin(this.windTime * 1.8);
           this.windGust = slowDrift + activeGust;
 
-          // Decay silk flutter energy smoothly back to near-stillness
-          this.silkEnergy *= Math.pow(0.32, dt);
+          // Decay silk flutter energy smoothly over ~2.5s
+          this.silkEnergy *= Math.pow(0.52, dt);
           if (this.silkEnergy < 0.004) this.silkEnergy = 0;
 
-          const targetTasselAngle = this.swayAngle * 1.45 + this.windGust;
-          const tasselAccel = -14 * (this.tasselAngle - targetTasselAngle);
-          this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * Math.pow(0.22, dt);
+          const targetTasselAngle = this.swayAngle * 1.6 + this.windGust;
+          const tasselAccel = -18 * (this.tasselAngle - targetTasselAngle);
+          this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * Math.pow(0.42, dt);
           this.tasselAngle += this.tasselVelocity * dt;
+          this.tasselAngle = Math.max(-0.62, Math.min(0.62, this.tasselAngle));
 
           // Smooth spring return for the main bead's upward slide motion
           const liftSpring = -110 * this.beadLift - 16 * this.beadLiftVel;
@@ -701,11 +703,11 @@
           const baseSpread = 13.5 * scale;
           const wt = this.windTime || 0;
           const gust = this.windGust || 0;
-          const velTrail = Math.max(-0.6, Math.min(0.6, -(this.tasselVelocity || 0) * 0.35));
+          const velTrail = Math.max(-1.0, Math.min(1.0, -(this.tasselVelocity || 0) * 0.28));
 
           ctx.save();
           ctx.translate(x, y);
-          ctx.rotate(angle * 0.72);
+          ctx.rotate(angle);
           ctx.lineCap = "round";
 
           // Draw 28 fine silken jhalar threads in 2 depth layers (rich saffron-crimson back, golden-saffron front)
@@ -724,15 +726,15 @@
               const lenVar = 0.88 + 0.18 * (0.5 + 0.5 * Math.sin(seed * 3.7));
               const len = baseLen * layer.lenScale * lenVar;
 
-              // Calm when still; ripples fluidly on touch, upward slide, or occasional gentle breeze
+              // Calm when still; swings & ripples visibly on touch, upward slide, or occasional gentle breeze
               const energy = this.silkEnergy || 0;
-              const calmBreath = Math.sin(wt * 0.65 + seed) * 0.55;
-              const wavePhase = wt * 2.8 - Math.abs(t) * 0.7 + i * 0.36 + layerIdx * 1.1;
-              const midWave = (calmBreath + Math.sin(wavePhase) * 3.2 * energy + gust * 16 + velTrail * 14) * scale;
-              const tipWave = (calmBreath * 1.6 + Math.sin(wavePhase - 0.95) * 6.5 * energy + Math.sin(wt * 4.2 + seed) * 1.8 * energy + gust * 30 + velTrail * 26) * scale;
+              const calmBreath = Math.sin(wt * 0.75 + seed) * 0.75;
+              const wavePhase = wt * 3.4 - Math.abs(t) * 0.75 + i * 0.38 + layerIdx * 1.1;
+              const midWave = (calmBreath + Math.sin(wavePhase) * 5.2 * energy + gust * 18 + velTrail * 18) * scale;
+              const tipWave = (calmBreath * 1.8 + Math.sin(wavePhase - 1.05) * 11.5 * energy + Math.sin(wt * 4.8 + seed) * 2.8 * energy + gust * 34 + velTrail * 36) * scale;
 
               // Outer threads flare slightly when moving, and settle neatly when still
-              const flutterSpread = 1.0 + Math.sin(wt * 1.8 + seed) * (0.02 + 0.09 * energy);
+              const flutterSpread = 1.0 + Math.sin(wt * 2.1 + seed) * (0.02 + 0.14 * energy);
               const startX = t * 3.6 * scale;
               const startY = 5.5 * scale;
 
@@ -1415,8 +1417,8 @@
         hasTriggeredInGesture = false;
         renderer.dragPull = 0;
         renderer.isTouching = true;
-        renderer.tasselVelocity += (Math.random() - 0.5) * 0.28;
-        renderer.silkEnergy = Math.min(1.0, renderer.silkEnergy + 0.35);
+        renderer.tasselVelocity += (Math.random() < 0.5 ? -1 : 1) * (1.2 + Math.random() * 0.7);
+        renderer.silkEnergy = Math.min(1.0, renderer.silkEnergy + 0.55);
         SacredAudio.ensureContext();
       });
 
