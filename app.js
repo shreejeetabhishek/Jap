@@ -947,7 +947,7 @@
             ? Math.max(0, this.targetCount - this.currentCount)
             : this.currentCount;
           const displayCount = formatNum(rawVal, this.numeralScript);
-          const fontSize = displayCount.length >= 4 ? pr * 0.56 : displayCount.length === 3 ? pr * 0.70 : pr * 0.88;
+          const fontSize = displayCount.length >= 4 ? pr * 0.64 : displayCount.length === 3 ? pr * 0.82 : pr * 1.04;
           ctx.save();
           ctx.font = `800 ${Math.round(fontSize)}px "Cinzel", "Playfair Display", Georgia, serif`;
           ctx.textAlign = "center";
