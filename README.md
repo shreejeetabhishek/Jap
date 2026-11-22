@@ -43,3 +43,4 @@ This build adds a small Sri Aurobindo & The Mother (Mirra Alfassa) selection: â€
 - **Fluid Wind-Swept Silken Jhalar**: Upgraded the Sumeru tassel with 35 layered saffron-gold silk strands, continuous multi-harmonic ambient breeze physics, traveling cubic-Bezier ripples along the tips, and a zari-wrapped knot collar.
 - **Photorealistic Embedded Tulsi Sprite**: Added an instant, zero-network embedded WebP sprite of the real Tulsi bead with natural wood grain and top bore.
 - **Photorealistic Embedded Chandan Sprite**: Added an instant, zero-network embedded WebP sprite of the real Chandan (sandalwood) bead with natural swirling wood grain.
+- **Photorealistic Embedded Sphatik Sprite**: Added an instant, zero-network embedded WebP sprite of the real Sphatik (clear quartz crystal) bead with natural internal crystal inclusions and vertical bore.
