@@ -290,12 +290,19 @@
           this.targetTiltX = 0;
           this.tasselAngle = 0;
           this.tasselVelocity = 0;
+          this.tasselBounceY = 0;
+          this.tasselBounceVel = 0;
+          this.tasselStretch = 0;
           this.windTime = Math.random() * 10;
           this.windGust = 0;
-          this.gustTimer = 4 + Math.random() * 6;
-          this.gustStrength = 0;
+          this.gustCooldown = 5 + Math.random() * 6;
+          this.gustActive = false;
+          this.gustElapsed = 0;
+          this.gustDuration = 4.2;
+          this.gustPeak = 0.08;
           this.gustDir = 1;
           this.silkEnergy = 0;
+          this.silkEnergyTarget = 0;
 
           this.beadSprites = {};
           this.buildAllBeadSprites();
@@ -582,9 +589,11 @@
           this.beadLift = Math.max(this.beadLift, 26);
           this.beadLiftVel = 165;
           this.swayVelocity += (Math.random() - 0.5) * 0.018;
+          // Smooth vertical silk spring bounce on slide-up/tap + subtle gentle sway
+          this.tasselBounceVel -= 54;
           const swingDir = this.tasselAngle >= 0 ? -1 : 1;
-          this.tasselVelocity += swingDir * (2.6 + Math.random() * 1.4);
-          this.silkEnergy = 1.0;
+          this.tasselVelocity += swingDir * (0.48 + Math.random() * 0.24);
+          this.silkEnergyTarget = Math.min(0.75, this.silkEnergyTarget + 0.55);
           return this.currentCount >= this.targetCount;
         }
 
@@ -656,31 +665,59 @@
           this.swayVelocity = (this.swayVelocity + accel * dt) * damping;
           this.swayAngle += this.swayVelocity * dt;
 
-          // Natural temple-room air: calm at rest with occasional gentle, visible breeze gusts
+          // Smooth occasional wind envelope (ease-in / ease-out, zero sudden kicks, no spring in wind)
           this.windTime += dt;
-          this.gustTimer -= dt;
-          if (this.gustTimer <= 0) {
-            this.gustTimer = 6 + Math.random() * 7;
-            this.gustDir = Math.random() < 0.5 ? -1 : 1;
-            this.gustStrength = 0.24 + Math.random() * 0.14;
-            this.tasselVelocity += this.gustDir * (0.9 + Math.random() * 0.5);
-            this.silkEnergy = Math.max(this.silkEnergy, 0.65);
+          let gustEnvelope = 0;
+          if (!this.gustActive) {
+            this.gustCooldown -= dt;
+            if (this.gustCooldown <= 0) {
+              this.gustActive = true;
+              this.gustElapsed = 0;
+              this.gustDuration = 3.8 + Math.random() * 2.4;
+              this.gustPeak = 0.065 + Math.random() * 0.045;
+              this.gustDir = Math.random() < 0.5 ? -1 : 1;
+            }
+          } else {
+            this.gustElapsed += dt;
+            const p = this.gustElapsed / this.gustDuration;
+            if (p >= 1) {
+              this.gustActive = false;
+              this.gustCooldown = 7 + Math.random() * 8;
+              gustEnvelope = 0;
+            } else {
+              // Smooth sin^2 bell curve: starts at 0, peaks gently, returns smoothly to 0
+              const s = Math.sin(Math.PI * p);
+              gustEnvelope = this.gustDir * this.gustPeak * s * s;
+            }
           }
-          // Smoothly fade the occasional gust back to calm stillness
-          this.gustStrength *= Math.pow(0.52, dt);
-          const slowDrift = Math.sin(this.windTime * 0.55) * 0.025;
-          const activeGust = this.gustDir * this.gustStrength * Math.sin(this.windTime * 1.8);
-          this.windGust = slowDrift + activeGust;
 
-          // Decay silk flutter energy smoothly over ~2.5s
-          this.silkEnergy *= Math.pow(0.52, dt);
-          if (this.silkEnergy < 0.004) this.silkEnergy = 0;
+          const slowDrift = Math.sin(this.windTime * 0.45) * 0.015;
+          this.windGust = slowDrift + gustEnvelope;
 
-          const targetTasselAngle = this.swayAngle * 1.6 + this.windGust;
-          const tasselAccel = -18 * (this.tasselAngle - targetTasselAngle);
-          this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * Math.pow(0.42, dt);
+          // Smoothly ease silk flutter energy (no abrupt jumps)
+          this.silkEnergyTarget *= Math.pow(0.45, dt);
+          if (this.silkEnergyTarget < 0.003) this.silkEnergyTarget = 0;
+          const desiredSilk = Math.max(this.silkEnergyTarget, Math.abs(gustEnvelope) * 3.2);
+          this.silkEnergy += (desiredSilk - this.silkEnergy) * Math.min(1, dt * 5.5);
+
+          // Gentle, smooth pendulum sway for the tassel
+          const targetTasselAngle = this.swayAngle * 1.15 + this.windGust;
+          const tasselAccel = -11 * (this.tasselAngle - targetTasselAngle) - 4.2 * this.tasselVelocity;
+          this.tasselVelocity += tasselAccel * dt;
           this.tasselAngle += this.tasselVelocity * dt;
-          this.tasselAngle = Math.max(-0.62, Math.min(0.62, this.tasselAngle));
+          this.tasselAngle = Math.max(-0.24, Math.min(0.24, this.tasselAngle));
+
+          // Vertical silk spring physics (triggered ONLY by touch / slide-up, stays 0 in wind)
+          const bounceAccel = -135 * this.tasselBounceY - 12.5 * this.tasselBounceVel;
+          this.tasselBounceVel += bounceAccel * dt;
+          this.tasselBounceY += this.tasselBounceVel * dt;
+          this.tasselBounceY = Math.max(-10, Math.min(8, this.tasselBounceY));
+          if (Math.abs(this.tasselBounceY) < 0.02 && Math.abs(this.tasselBounceVel) < 0.05) {
+            this.tasselBounceY = 0;
+            this.tasselBounceVel = 0;
+          }
+          // Subtle elastic silk-strand length stretch coupled to vertical spring bounce
+          this.tasselStretch = Math.max(-0.08, Math.min(0.14, this.tasselBounceY * 0.016));
 
           // Smooth spring return for the main bead's upward slide motion
           const liftSpring = -110 * this.beadLift - 16 * this.beadLiftVel;
@@ -699,15 +736,19 @@
         }
 
         drawSilkenTassel(ctx, x, y, scale, angle) {
-          const baseLen = 46 * scale;
-          const baseSpread = 13.5 * scale;
+          const bounceY = (this.tasselBounceY || 0) * scale;
+          const stretch = 1 + (this.tasselStretch || 0);
+          const baseLen = 46 * scale * stretch;
+          // Slight natural silk flare when the spring compresses/bounces
+          const bounceFlare = 1 - (this.tasselStretch || 0) * 0.55;
+          const baseSpread = 13.5 * scale * bounceFlare;
           const wt = this.windTime || 0;
           const gust = this.windGust || 0;
-          const velTrail = Math.max(-1.0, Math.min(1.0, -(this.tasselVelocity || 0) * 0.28));
+          const velTrail = Math.max(-0.45, Math.min(0.45, -(this.tasselVelocity || 0) * 0.22));
 
           ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(angle);
+          ctx.translate(x, y + bounceY);
+          ctx.rotate(angle * 0.85);
           ctx.lineCap = "round";
 
           // Draw 28 fine silken jhalar threads in 2 depth layers (rich saffron-crimson back, golden-saffron front)
@@ -726,15 +767,15 @@
               const lenVar = 0.88 + 0.18 * (0.5 + 0.5 * Math.sin(seed * 3.7));
               const len = baseLen * layer.lenScale * lenVar;
 
-              // Calm when still; swings & ripples visibly on touch, upward slide, or occasional gentle breeze
+              // Smooth, restrained silk motion: calm at rest, gentle soft waves in wind or touch
               const energy = this.silkEnergy || 0;
-              const calmBreath = Math.sin(wt * 0.75 + seed) * 0.75;
-              const wavePhase = wt * 3.4 - Math.abs(t) * 0.75 + i * 0.38 + layerIdx * 1.1;
-              const midWave = (calmBreath + Math.sin(wavePhase) * 5.2 * energy + gust * 18 + velTrail * 18) * scale;
-              const tipWave = (calmBreath * 1.8 + Math.sin(wavePhase - 1.05) * 11.5 * energy + Math.sin(wt * 4.8 + seed) * 2.8 * energy + gust * 34 + velTrail * 36) * scale;
+              const calmBreath = Math.sin(wt * 0.65 + seed) * 0.35;
+              const wavePhase = wt * 2.2 - Math.abs(t) * 0.65 + i * 0.32 + layerIdx * 0.9;
+              const midWave = (calmBreath + Math.sin(wavePhase) * 2.0 * energy + gust * 10 + velTrail * 9) * scale;
+              const tipWave = (calmBreath * 1.5 + Math.sin(wavePhase - 0.9) * 4.2 * energy + Math.sin(wt * 3.1 + seed) * 0.9 * energy + gust * 19 + velTrail * 18) * scale;
 
-              // Outer threads flare slightly when moving, and settle neatly when still
-              const flutterSpread = 1.0 + Math.sin(wt * 2.1 + seed) * (0.02 + 0.14 * energy);
+              // Subtle organic thread separation
+              const flutterSpread = 1.0 + Math.sin(wt * 1.5 + seed) * (0.015 + 0.055 * energy);
               const startX = t * 3.6 * scale;
               const startY = 5.5 * scale;
 
@@ -1417,8 +1458,9 @@
         hasTriggeredInGesture = false;
         renderer.dragPull = 0;
         renderer.isTouching = true;
-        renderer.tasselVelocity += (Math.random() < 0.5 ? -1 : 1) * (1.2 + Math.random() * 0.7);
-        renderer.silkEnergy = Math.min(1.0, renderer.silkEnergy + 0.55);
+        renderer.tasselBounceVel -= 26;
+        renderer.tasselVelocity += (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.14);
+        renderer.silkEnergyTarget = Math.min(0.55, renderer.silkEnergyTarget + 0.30);
         SacredAudio.ensureContext();
       });
 
