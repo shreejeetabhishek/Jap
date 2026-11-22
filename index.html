@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#140c07" />
-  <meta name="description" content="Divya Jap — Realistic First-Person View (FPV) Digital Mala Counter for Naam Jap, Mantra Jap, and Chalisa Jap with Rudraksha, Tulsi, Sphatik, and Chandan beads." />
+  <meta name="description" content="Divya Jap — Authentic First-Person View (FPV) Digital Mala Counter for Naam Jap, Mantra Jap, and Chalisa Jap with Rudraksha, Tulsi, Sphatik, and Chandan beads." />
   <title>Divya Jap — Digital Mala Counter</title>
   <link rel="dns-prefetch" href="//cdn.jsdelivr.net" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23140c07'/%3E%3Ccircle cx='32' cy='32' r='22' fill='%23753114' stroke='%23f0b865' stroke-width='2'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='serif' font-size='22' font-weight='bold' fill='%23fff7ed'%3E%E0%A5%90%3C/text%3E%3C/svg%3E" />
@@ -19,32 +19,37 @@
       <div class="hud-bar">
         <button id="btnChantMenu" class="pill-btn chant-selector-btn" type="button" aria-label="Select Naam, Mantra, or Chalisa">
           <span class="om-badge" aria-hidden="true">ॐ</span>
-          <span>Chant</span>
+          <span id="hudChantBtnText">Chant</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
 
-        <div class="stats-pill" role="status" aria-live="polite">
+        <button id="btnStatsMenu" class="stats-pill" type="button" title="View Sadhana Stats, Streak & 7-Day History" aria-label="View Sadhana Statistics">
           <div class="stat-item">
-            <span class="stat-label">Malas</span>
+            <span class="stat-label" id="lblStatMalas">Malas</span>
             <span id="malasCompletedVal" class="stat-value">0</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-label">Total</span>
-            <span id="totalCountVal" class="stat-value">0</span>
+            <span class="stat-label" id="lblStatToday">Today</span>
+            <span id="todayCountVal" class="stat-value">0</span>
           </div>
-        </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-label" id="lblStatStreak">Streak</span>
+            <span id="streakCountVal" class="stat-value">0d</span>
+          </div>
+        </button>
 
         <div class="icon-actions">
           <button id="btnSound" class="icon-btn active" type="button" title="Toggle Bead & Temple Bell Audio" aria-label="Toggle Audio">
-            <svg id="iconSoundOn" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-            <svg id="iconSoundOff" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            <svg id="iconSoundOn" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+            <svg id="iconSoundOff" class="hidden" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
           </button>
           <button id="btnTheme" class="icon-btn" type="button" title="Switch Day / Night Temple Theme" aria-label="Switch Theme">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
           </button>
-          <button id="btnReset" class="icon-btn" type="button" title="Reset Current Mala Count" aria-label="Reset Count">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          <button id="btnSettingsMenu" class="icon-btn" type="button" title="Settings, Numerals, Reset & Local Backup" aria-label="Settings and Local Backup">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           </button>
         </div>
       </div>
@@ -54,6 +59,14 @@
         <div id="chantCategoryTag" class="chant-category">NAAM JAP</div>
         <h1 id="chantTitle" class="chant-title">RAM</h1>
         <p id="chantSubtitle" class="chant-subtitle">श्री राम जय राम जय जय राम</p>
+
+        <div class="session-telemetry" id="sessionTelemetry">
+          <span class="telemetry-chip">⏱ <strong id="sessionTimeVal">00:00</strong></span>
+          <span>•</span>
+          <span class="telemetry-chip">⚡ <strong id="sessionPaceVal">0</strong>/min</span>
+          <span>•</span>
+          <span class="telemetry-chip" id="sankalpaChip">🎯 <strong id="sankalpaProgressVal">0/3</strong></span>
+        </div>
 
         <div id="chalisaControls" class="chalisa-bar hidden">
           <button id="btnPrevVerse" class="verse-nav-btn" type="button" aria-label="Previous Verse">‹ Prev</button>
@@ -68,11 +81,22 @@
     <main class="mala-stage" id="malaStage">
       <canvas id="malaCanvas" aria-label="Interactive hanging mala with a side-angle view. Slide upward to advance one bead."></canvas>
 
+      <div class="stage-left-rail">
+        <button id="btnUndo" class="rail-btn" type="button" title="Undo Last Bead Count" aria-label="Undo Last Bead Count" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"></path><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path></svg>
+          <span id="lblUndo">UNDO</span>
+        </button>
+        <button id="btnAutoJap" class="rail-btn" type="button" title="Toggle Guided Auto-Jap Pacer" aria-label="Toggle Auto-Jap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span id="lblAuto">AUTO</span>
+        </button>
+      </div>
+
       <div id="slideCue" class="slide-cue" aria-hidden="true">
         <div class="cue-arrow">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
         </div>
-        <span>SLIDE UP</span>
+        <span id="lblSlideUp">SLIDE UP</span>
       </div>
 
       <div id="toastBanner" class="toast-banner" role="status" aria-live="assertive"></div>
@@ -83,7 +107,7 @@
       <div class="target-row">
         <button id="btnTargetMenu" class="target-trigger" type="button" aria-label="Choose Total Mala Beads">
           <span id="targetCountDisplay" class="target-number">108</span>
-          <span class="target-unit">MALA BEADS</span>
+          <span id="targetUnitDisplay" class="target-unit">MALA BEADS</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
         <div class="progress-track" aria-hidden="true">
@@ -151,11 +175,11 @@
     </div>
   </div>
 
-  <!-- Target Beads Selection Modal -->
+  <!-- Target Beads & Sankalpa Goal Modal -->
   <div id="targetModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="targetModalHeading">
     <div class="modal-sheet">
       <div class="modal-header">
-        <h2 id="targetModalHeading">Total Mala Beads</h2>
+        <h2 id="targetModalHeading">Mala Beads & Sankalpa</h2>
         <button class="modal-close" data-close="targetModal" type="button" aria-label="Close">✕</button>
       </div>
       <p class="modal-note">Each preset physically builds the exact number of counting beads plus 1 Sumeru Guru bead.</p>
@@ -166,6 +190,151 @@
         <input id="customTargetInput" class="form-input" type="number" min="1" max="10008" placeholder="Custom bead count (1 – 10008)" required />
         <button class="primary-action-btn compact" type="submit">Set</button>
       </form>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Daily Sankalpa (Malas)</span>
+          <span class="setting-desc">Target full malas to complete today</span>
+        </div>
+        <div class="segmented-ctrl" id="sankalpaPresetCtrl">
+          <button class="seg-btn" data-sankalpa="1" type="button">1</button>
+          <button class="seg-btn" data-sankalpa="3" type="button">3</button>
+          <button class="seg-btn" data-sankalpa="5" type="button">5</button>
+          <button class="seg-btn" data-sankalpa="11" type="button">11</button>
+          <button class="seg-btn" data-sankalpa="21" type="button">21</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sadhana Analytics, 7-Day Chart & History Modal -->
+  <div id="statsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="statsModalHeading">
+    <div class="modal-sheet tall">
+      <div class="modal-header">
+        <h2 id="statsModalHeading">Sadhana Insights (100% Local)</h2>
+        <button class="modal-close" data-close="statsModal" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Today's Jap</div>
+          <div class="kpi-val" id="kpiTodayCount">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Lifetime Jap</div>
+          <div class="kpi-val" id="kpiLifetimeCount">0</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Current Streak</div>
+          <div class="kpi-val" id="kpiStreak">0 Days</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Malas Completed</div>
+          <div class="kpi-val" id="kpiMalas">0</div>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div class="chart-title">
+          <span>Last 7 Days Practice</span>
+          <span id="chartBestDay">Best: 0</span>
+        </div>
+        <div id="sevenDayChart" class="bar-chart"></div>
+      </div>
+
+      <div>
+        <div class="chart-title"><span>Daily History Log</span></div>
+        <div id="dailyHistoryList" class="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings, Numerals, Reset Options & Local JSON Backup Modal -->
+  <div id="settingsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsModalHeading">
+    <div class="modal-sheet tall">
+      <div class="modal-header">
+        <h2 id="settingsModalHeading">Sadhana Settings & Local Backup</h2>
+        <button class="modal-close" data-close="settingsModal" type="button" aria-label="Close">✕</button>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Counter Mode</span>
+          <span class="setting-desc">Count Up (0→108) or Countdown (108→0)</span>
+        </div>
+        <div class="segmented-ctrl" id="countModeCtrl">
+          <button class="seg-btn active" data-mode="up" type="button">Up</button>
+          <button class="seg-btn" data-mode="down" type="button">Down</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Numerals Script</span>
+          <span class="setting-desc">Standard (123) or Devanagari (१२३)</span>
+        </div>
+        <div class="segmented-ctrl" id="numeralCtrl">
+          <button class="seg-btn active" data-num="en" type="button">123</button>
+          <button class="seg-btn" data-num="hi" type="button">१२३</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Interface Language</span>
+          <span class="setting-desc">English or हिन्दी labels</span>
+        </div>
+        <div class="segmented-ctrl" id="langCtrl">
+          <button class="seg-btn active" data-lang="en" type="button">English</button>
+          <button class="seg-btn" data-lang="hi" type="button">हिन्दी</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Auto-Jap Pacer Interval</span>
+          <span class="setting-desc">Seconds per bead when AUTO is active</span>
+        </div>
+        <div class="segmented-ctrl" id="autoSpeedCtrl">
+          <button class="seg-btn" data-speed="1000" type="button">1.0s</button>
+          <button class="seg-btn active" data-speed="1500" type="button">1.5s</button>
+          <button class="seg-btn" data-speed="2500" type="button">2.5s</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Keep Screen Awake</span>
+          <span class="setting-desc">Prevent screen sleep during long jap</span>
+        </div>
+        <div class="segmented-ctrl" id="wakeLockCtrl">
+          <button class="seg-btn active" data-wake="on" type="button">On</button>
+          <button class="seg-btn" data-wake="off" type="button">Off</button>
+        </div>
+      </div>
+
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-title">Haptic Vibration</span>
+          <span class="setting-desc">Subtle pulse on each bead & Sumeru</span>
+        </div>
+        <div class="segmented-ctrl" id="hapticCtrl">
+          <button class="seg-btn active" data-haptic="on" type="button">On</button>
+          <button class="seg-btn" data-haptic="off" type="button">Off</button>
+        </div>
+      </div>
+
+      <div class="backup-actions">
+        <button id="btnResetCurrentMala" class="secondary-action-btn" type="button">Reset Current Mala</button>
+        <button id="btnResetTodayOnly" class="danger-action-btn" type="button">Clear Today's Log</button>
+      </div>
+
+      <p class="modal-note">100% offline local storage. Export a JSON backup file anytime or restore from a saved file—no server or paywall required.</p>
+      <div class="backup-actions">
+        <button id="btnExportJson" class="primary-action-btn" type="button">⬇ Export Local Backup</button>
+        <button id="btnImportJsonTrigger" class="secondary-action-btn" type="button">⬆ Restore Backup</button>
+        <input id="importJsonInput" type="file" accept=".json,application/json" class="hidden" />
+      </div>
     </div>
   </div>
 

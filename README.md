@@ -26,3 +26,11 @@ The initial experience requires no remote image, font, or library download. The 
 ## Expanded devotional chant catalogue
 
 This build adds a small Sri Aurobindo & The Mother (Mirra Alfassa) selection: “Ma”, “Sri Aurobindo Saranam Mama”, “Om Namo Bhagavate”, and “Om Namo Bhagavate Sri Aravindaya”. It also adds a Satsang/Thakur Anukulchandra Radhaswami remembrance entry. These are presented as devotional selections/invocations, not as universally prescribed or initiation-required practices. Radha Soami initiation-specific Simran words are intentionally not supplied; users should follow the instructions of their own tradition or authorised teacher.
+
+## Competitive Edge Upgrades (100% Local-First)
+- **Detailed Rudraksha & Deep Mukhi Grooves Preserved**: Retains the displaced 3D Rudraksha seed relief, deep winding mukhi clefts, wart-like surface protuberances, and continuous hanging mala rendering.
+- **Undo & Auto-Jap Pacer**: Quick **UNDO** (up to 30 slides or `Ctrl/Cmd+Z`) and **AUTO** pacer (`1.0s`, `1.5s`, or `2.5s` intervals).
+- **Daily Sankalpa & Session Telemetry**: Track active session duration, live pace (`beads/min`), and daily Sankalpa completion.
+- **Sadhana Insights & 7-Day Chart**: Local-only daily logs, streak tracking, and 7-day bar visualization.
+- **Count Up / Countdown, Devanagari (`१२३`) Numerals & Hindi/English UI**: Switch numeral script, counter direction, interface language, haptic vibration, and Screen Wake Lock.
+- **Free Local JSON Backup**: Export and restore your full practice data locally as `.json` without any cloud paywall.

@@ -136,6 +136,46 @@
         ],
         targetPresets: [3, 5, 7, 8, 9, 11, 13, 108, 1008]
       };
+        i18n: {
+          en: {
+            chant: "Chant",
+            malas: "Malas",
+            today: "Today",
+            streak: "Streak",
+            undo: "UNDO",
+            auto: "AUTO",
+            stop: "STOP",
+            slideUp: "SLIDE UP",
+            malaBeads: "MALA BEADS"
+          },
+          hi: {
+            chant: "नाम चुनें",
+            malas: "माला",
+            today: "आज",
+            streak: "निरंतर",
+            undo: "पूर्ववत",
+            auto: "स्वतः",
+            stop: "रोकें",
+            slideUp: "ऊपर सरकाएं",
+            malaBeads: "मनके"
+          }
+        }
+      };
+
+      const DEVANAGARI_DIGITS = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+      function formatNum(value, script) {
+        const str = String(value);
+        if (script !== "hi") return str;
+        return str.replace(/[0-9]/g, (d) => DEVANAGARI_DIGITS[parseInt(d, 10)]);
+      }
+
+      function getTodayKey() {
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      }
 
       /* ======================================================================
          2. SYNTHESIZED WEB AUDIO ENGINE (BEAD CLICKS & SUMERU TEMPLE BELL)
@@ -224,20 +264,7 @@
 
       const SacredAudio = new SacredAudioEngine();
 
-      /* ======================================================================
-         3. PHOTOREALISTIC FPV MALA RENDERER
-         - Photorealistic procedural micro-textures (bumpy organic 5-Mukhi Rudraksha
-           seeds with bumpy silhouettes & Brahma thread knots, warm grained Tulsi,
-           refractive faceted Sphatik crystal, and silky Chandan wood).
-         - Realistic Proportional Bead Sizing:
-           * The active center bead is only slightly larger (~1.25x) than the
-             immediate neighboring beads on the strand (not an oversized ball
-             dwarfing tiny dots), creating a cohesive, authentic garland scale.
-         - Natural Engraved / Embossed Counter Integration:
-           * Instead of a fake white-outlined digital sticker floating on top,
-             the count is rendered as subtle warm gold-leaf / carved-inlay
-             lettering following the spherical lighting and material surface.
-         ====================================================================== */
+
       class FpvMalaRenderer {
         constructor(canvas) {
           this.canvas = canvas;
@@ -249,6 +276,8 @@
           this.material = "rudraksha";
           this.targetCount = 108;
           this.currentCount = 0;
+          this.countMode = "up";
+          this.numeralScript = "en";
 
           this.advanceOffset = 0;
           this.targetAdvanceOffset = 0;
@@ -875,6 +904,14 @@
           return this.currentCount >= this.targetCount;
         }
 
+        undoOneBead() {
+          if (this.currentCount <= 0) return false;
+          this.currentCount -= 1;
+          this.targetAdvanceOffset = Math.max(0, this.targetAdvanceOffset - 1);
+          this.swayVelocity += (Math.random() - 0.5) * 0.012;
+          return true;
+        }
+
         resetCycleAfterCompletion() {
           this.currentCount = 0;
         }
@@ -888,14 +925,8 @@
         getFpvLoopPoint(u, dims) {
           const { centerX, topY, bottomY, halfWidthX, zDepth } = dims;
           const theta = u * Math.PI * 2;
-
-          // A continuous hanging mala: both sides of the loop travel vertically
-          // past the counting bead, so beads remain visible above AND below it.
           const spanY = Math.max(120, bottomY - topY);
           const y = topY + 0.5 * (1 - Math.cos(theta)) * spanY;
-
-          // Keep the two sides close together, like a real strand viewed slightly
-          // from the side. This creates overlapping beads without hiding a whole side.
           const x = centerX - Math.sin(theta) * halfWidthX;
           const z = -Math.sin(theta) * zDepth;
           return { x, y, z };
@@ -910,8 +941,6 @@
           if (n <= 13) beadBaseR = primaryR * 0.54;
           else if (n > 108) beadBaseR = primaryR * 0.43;
 
-          // Put the numbered counting bead inside the hanging strand rather than
-          // at its endpoint. This leaves a visible run of beads above and below it.
           const centerY = Math.max(primaryR * 3.4, this.height * 0.34);
           const topY = Math.max(primaryR * 1.25, centerY - primaryR * 2.35);
           const bottomY = Math.min(this.height - 48, centerY + this.height * 0.53);
@@ -955,7 +984,6 @@
           ctx.translate(x, y);
           ctx.rotate(angle);
 
-          // Woven golden-silk cap & Brahma knot collar
           ctx.fillStyle = "#c9852c";
           ctx.beginPath();
           ctx.roundRect(-5 * scale, -1 * scale, 10 * scale, 7 * scale, 2.5 * scale);
@@ -965,7 +993,6 @@
           ctx.lineWidth = 1.1 * scale;
           ctx.strokeRect(-4.5 * scale, 1.5 * scale, 9 * scale, 2 * scale);
 
-          // Fine silken jhalar threads
           const strands = 17;
           for (let i = 0; i < strands; i++) {
             const t = (i / (strands - 1)) * 2 - 1;
@@ -1090,7 +1117,10 @@
 
           ctx.drawImage(sprite, cx - pr, cy - pr, pr * 2, pr * 2);
 
-          const displayCount = String(this.currentCount);
+          const rawVal = this.countMode === "down"
+            ? Math.max(0, this.targetCount - this.currentCount)
+            : this.currentCount;
+          const displayCount = formatNum(rawVal, this.numeralScript);
           const fontSize = displayCount.length >= 4 ? pr * 0.50 : displayCount.length === 3 ? pr * 0.60 : pr * 0.72;
           ctx.save();
           ctx.font = `700 ${Math.round(fontSize)}px "Cinzel", "Playfair Display", Georgia, serif`;
@@ -1108,10 +1138,11 @@
         }
       }
 
+
       /* ======================================================================
-         4. APPLICATION CONTROLLER & GESTURE LOCKING
+         4. LOCAL-FIRST APPLICATION CONTROLLER (ANALYTICS, UNDO, AUTO-JAP, BACKUP)
          ====================================================================== */
-      const STORAGE_KEY = "divya_jap_single_v2";
+      const STORAGE_KEY = "divya_jap_local_v3";
 
       const state = {
         category: "naam",
@@ -1122,22 +1153,31 @@
         verseIndex: 0,
         material: "rudraksha",
         targetCount: 108,
+        sankalpaMalas: 3,
         currentCount: 0,
         totalCount: 0,
         malasCompleted: 0,
         soundEnabled: true,
-        theme: "dark"
+        hapticEnabled: true,
+        wakeLockEnabled: true,
+        countMode: "up",
+        numeralScript: "en",
+        lang: "en",
+        autoSpeedMs: 1500,
+        theme: "dark",
+        dailyLogs: {}
       };
 
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
         if (saved && typeof saved === "object") {
           Object.assign(state, saved);
+          if (!state.dailyLogs || typeof state.dailyLogs !== "object") {
+            state.dailyLogs = {};
+          }
         }
       } catch (_) {}
 
-      // First launch after the detailed Rudraksha update: show Rudraksha by default
-      // once, even if an older build had another bead selected. Preserve all counts.
       try {
         const detailDefaultKey = "divya_jap_detailed_rudraksha_default_v1";
         if (!localStorage.getItem(detailDefaultKey)) {
@@ -1152,6 +1192,35 @@
         } catch (_) {}
       }
 
+      const undoStack = [];
+      let sessionActiveSeconds = 0;
+      let lastActivityTimestamp = 0;
+      let autoJapTimer = null;
+      let wakeLockSentinel = null;
+
+      async function syncWakeLock() {
+        if (!("wakeLock" in navigator)) return;
+        try {
+          if (state.wakeLockEnabled && document.visibilityState === "visible") {
+            if (!wakeLockSentinel) {
+              wakeLockSentinel = await navigator.wakeLock.request("screen");
+              wakeLockSentinel.addEventListener("release", () => {
+                wakeLockSentinel = null;
+              });
+            }
+          } else if (wakeLockSentinel) {
+            await wakeLockSentinel.release();
+            wakeLockSentinel = null;
+          }
+        } catch (_) {}
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          syncWakeLock();
+        }
+      });
+
       const canvas = document.getElementById("malaCanvas");
       const malaStage = document.getElementById("malaStage");
       const renderer = new FpvMalaRenderer(canvas);
@@ -1160,9 +1229,12 @@
       renderer.currentCount = state.currentCount;
       renderer.advanceOffset = state.currentCount;
       renderer.targetAdvanceOffset = state.currentCount;
+      renderer.countMode = state.countMode;
+      renderer.numeralScript = state.numeralScript;
 
       const malasCompletedVal = document.getElementById("malasCompletedVal");
-      const totalCountVal = document.getElementById("totalCountVal");
+      const todayCountVal = document.getElementById("todayCountVal");
+      const streakCountVal = document.getElementById("streakCountVal");
       const chantCategoryTag = document.getElementById("chantCategoryTag");
       const chantTitleEl = document.getElementById("chantTitle");
       const chantSubtitleEl = document.getElementById("chantSubtitle");
@@ -1171,6 +1243,8 @@
       const toastBanner = document.getElementById("toastBanner");
       const chalisaControls = document.getElementById("chalisaControls");
       const verseProgressLabel = document.getElementById("verseProgressLabel");
+      const btnUndo = document.getElementById("btnUndo");
+      const btnAutoJap = document.getElementById("btnAutoJap");
 
       let toastTimer = null;
       function showToast(msg) {
@@ -1182,11 +1256,74 @@
         }, 2400);
       }
 
+      function ensureTodayLog() {
+        const key = getTodayKey();
+        if (!state.dailyLogs[key]) {
+          state.dailyLogs[key] = { count: 0, malas: 0, seconds: 0 };
+        }
+        return state.dailyLogs[key];
+      }
+
+      function computeStreakDays() {
+        let streak = 0;
+        const d = new Date();
+        const todayKey = getTodayKey();
+        if (!state.dailyLogs[todayKey] || state.dailyLogs[todayKey].count <= 0) {
+          d.setDate(d.getDate() - 1);
+        }
+        while (true) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const k = `${yyyy}-${mm}-${dd}`;
+          if (state.dailyLogs[k] && state.dailyLogs[k].count > 0) {
+            streak += 1;
+            d.setDate(d.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+        return streak;
+      }
+
+      function formatDuration(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+
       function updateUI() {
         document.documentElement.setAttribute("data-theme", state.theme);
-        malasCompletedVal.textContent = state.malasCompleted;
-        totalCountVal.textContent = state.totalCount;
-        targetCountDisplay.textContent = state.targetCount;
+        renderer.countMode = state.countMode;
+        renderer.numeralScript = state.numeralScript;
+
+        const t = DIVYA_DATA.i18n[state.lang] || DIVYA_DATA.i18n.en;
+        document.getElementById("hudChantBtnText").textContent = t.chant;
+        document.getElementById("lblStatMalas").textContent = t.malas;
+        document.getElementById("lblStatToday").textContent = t.today;
+        document.getElementById("lblStatStreak").textContent = t.streak;
+        document.getElementById("lblUndo").textContent = t.undo;
+        document.getElementById("lblAuto").textContent = autoJapTimer ? t.stop : t.auto;
+        document.getElementById("lblSlideUp").textContent = t.slideUp;
+        document.getElementById("targetUnitDisplay").textContent = t.malaBeads;
+
+        const todayLog = ensureTodayLog();
+        const streak = computeStreakDays();
+
+        malasCompletedVal.textContent = formatNum(state.malasCompleted, state.numeralScript);
+        todayCountVal.textContent = formatNum(todayLog.count, state.numeralScript);
+        streakCountVal.textContent = `${formatNum(streak, state.numeralScript)}d`;
+        targetCountDisplay.textContent = formatNum(state.targetCount, state.numeralScript);
+
+        const sankalpaDone = Math.min(state.sankalpaMalas, todayLog.malas);
+        document.getElementById("sankalpaProgressVal").textContent =
+          `${formatNum(sankalpaDone, state.numeralScript)}/${formatNum(state.sankalpaMalas, state.numeralScript)}`;
+
+        document.getElementById("sessionTimeVal").textContent = formatDuration(sessionActiveSeconds);
+        const pace = sessionActiveSeconds >= 5
+          ? Math.round((todayLog.count / Math.max(1, todayLog.seconds)) * 60)
+          : 0;
+        document.getElementById("sessionPaceVal").textContent = formatNum(pace, state.numeralScript);
 
         const pct = Math.min(100, (state.currentCount / Math.max(1, state.targetCount)) * 100);
         malaProgressFill.style.width = `${pct}%`;
@@ -1220,12 +1357,39 @@
         document.getElementById("btnSound").classList.toggle("active", state.soundEnabled);
         document.getElementById("iconSoundOn").classList.toggle("hidden", !state.soundEnabled);
         document.getElementById("iconSoundOff").classList.toggle("hidden", state.soundEnabled);
+
+        btnUndo.disabled = undoStack.length === 0;
+        btnAutoJap.classList.toggle("active", Boolean(autoJapTimer));
       }
 
+      setInterval(() => {
+        if (lastActivityTimestamp > 0 && Date.now() - lastActivityTimestamp < 15000) {
+          sessionActiveSeconds += 1;
+          const todayLog = ensureTodayLog();
+          todayLog.seconds = (todayLog.seconds || 0) + 1;
+          document.getElementById("sessionTimeVal").textContent = formatDuration(sessionActiveSeconds);
+        }
+      }, 1000);
+
       function triggerSingleBeadAdvance() {
+        lastActivityTimestamp = Date.now();
+        syncWakeLock();
+
+        const todayLog = ensureTodayLog();
+        undoStack.push({
+          prevCount: state.currentCount,
+          prevTotal: state.totalCount,
+          prevMalas: state.malasCompleted,
+          prevTodayCount: todayLog.count,
+          prevTodayMalas: todayLog.malas,
+          prevVerse: state.verseIndex
+        });
+        if (undoStack.length > 30) undoStack.shift();
+
         const completed = renderer.advanceOneBead();
         state.currentCount = renderer.currentCount;
         state.totalCount += 1;
+        todayLog.count += 1;
 
         if (state.category === "chalisa") {
           const chalisa = DIVYA_DATA.chalisas.find((c) => c.id === state.chalisaId);
@@ -1236,9 +1400,15 @@
 
         if (completed) {
           state.malasCompleted += 1;
+          todayLog.malas += 1;
           SacredAudio.playSumeruBell();
-          if (navigator.vibrate) navigator.vibrate([45, 60, 90]);
-          showToast(`Sumeru Reached • ${state.malasCompleted} Mala Completed`);
+          if (state.hapticEnabled && navigator.vibrate) navigator.vibrate([45, 60, 90]);
+
+          if (todayLog.malas === state.sankalpaMalas) {
+            showToast(`🎉 Sankalpa Fulfilled • ${state.sankalpaMalas} Malas Today!`);
+          } else {
+            showToast(`Sumeru Reached • ${state.malasCompleted} Mala Completed`);
+          }
 
           setTimeout(() => {
             renderer.resetCycleAfterCompletion();
@@ -1248,12 +1418,58 @@
           }, 420);
         } else {
           SacredAudio.playBeadClick(state.material);
-          if (navigator.vibrate) navigator.vibrate(14);
+          if (state.hapticEnabled && navigator.vibrate) navigator.vibrate(14);
         }
 
         updateUI();
         saveState();
       }
+
+      function handleUndo() {
+        const snap = undoStack.pop();
+        if (!snap) return;
+        const todayLog = ensureTodayLog();
+        state.currentCount = snap.prevCount;
+        state.totalCount = snap.prevTotal;
+        state.malasCompleted = snap.prevMalas;
+        todayLog.count = snap.prevTodayCount;
+        todayLog.malas = snap.prevTodayMalas;
+        state.verseIndex = snap.prevVerse;
+
+        renderer.currentCount = state.currentCount;
+        renderer.targetAdvanceOffset = state.currentCount;
+        renderer.advanceOffset = state.currentCount;
+        updateUI();
+        saveState();
+        showToast("Undid last bead");
+      }
+
+      function toggleAutoJap() {
+        if (autoJapTimer) {
+          clearInterval(autoJapTimer);
+          autoJapTimer = null;
+          updateUI();
+          showToast("Auto-Jap Paused");
+        } else {
+          SacredAudio.ensureContext();
+          triggerSingleBeadAdvance();
+          autoJapTimer = setInterval(() => {
+            triggerSingleBeadAdvance();
+          }, state.autoSpeedMs);
+          updateUI();
+          showToast(`Auto-Jap Active (${(state.autoSpeedMs / 1000).toFixed(1)}s / bead)`);
+        }
+      }
+
+      btnUndo.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handleUndo();
+      });
+
+      btnAutoJap.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleAutoJap();
+      });
 
       let pointerActive = false;
       let startY = 0;
@@ -1261,6 +1477,7 @@
       const SLIDE_THRESHOLD = 28;
 
       malaStage.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("button")) return;
         pointerActive = true;
         startY = e.clientY;
         hasTriggeredInGesture = false;
@@ -1275,9 +1492,7 @@
           return;
         }
 
-        if (!pointerActive) return;
         const deltaY = startY - e.clientY;
-
         if (deltaY <= 0) {
           renderer.dragPull = 0;
           return;
@@ -1312,6 +1527,9 @@
         if (e.key === "ArrowUp" || e.key === " ") {
           e.preventDefault();
           triggerSingleBeadAdvance();
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          handleUndo();
         }
       });
 
@@ -1336,14 +1554,6 @@
         state.theme = state.theme === "dark" ? "light" : "dark";
         updateUI();
         saveState();
-      });
-
-      document.getElementById("btnReset").addEventListener("click", () => {
-        state.currentCount = 0;
-        renderer.resetAll();
-        updateUI();
-        saveState();
-        showToast("Current Mala Count Reset to 0");
       });
 
       document.getElementById("btnPrevVerse").addEventListener("click", () => {
@@ -1405,10 +1615,87 @@
           .map(
             (num) => `
             <button class="preset-btn ${state.targetCount === num ? "selected" : ""}" data-target="${num}" type="button">
-              ${num}
+              ${formatNum(num, state.numeralScript)}
             </button>`
           )
           .join("");
+
+        document.querySelectorAll("#sankalpaPresetCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", parseInt(b.dataset.sankalpa, 10) === state.sankalpaMalas);
+        });
+      }
+
+      function populateStatsModal() {
+        const todayLog = ensureTodayLog();
+        const streak = computeStreakDays();
+        document.getElementById("kpiTodayCount").textContent = formatNum(todayLog.count, state.numeralScript);
+        document.getElementById("kpiLifetimeCount").textContent = formatNum(state.totalCount, state.numeralScript);
+        document.getElementById("kpiStreak").textContent = `${formatNum(streak, state.numeralScript)} Days`;
+        document.getElementById("kpiMalas").textContent = formatNum(state.malasCompleted, state.numeralScript);
+
+        const days = [];
+        let maxCount = 1;
+        let bestDayCount = 0;
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const key = `${yyyy}-${mm}-${dd}`;
+          const c = state.dailyLogs[key] ? state.dailyLogs[key].count : 0;
+          if (c > maxCount) maxCount = c;
+          if (c > bestDayCount) bestDayCount = c;
+          days.push({ label: dayNames[d.getDay()], count: c });
+        }
+
+        document.getElementById("chartBestDay").textContent = `Best: ${formatNum(bestDayCount, state.numeralScript)}`;
+        document.getElementById("sevenDayChart").innerHTML = days
+          .map((item) => {
+            const hPct = Math.max(6, Math.round((item.count / maxCount) * 72));
+            return `
+              <div class="bar-col">
+                <div class="bar-fill" style="height:${hPct}px" title="${item.label}: ${item.count}"></div>
+                <span class="bar-day">${item.label}</span>
+              </div>`;
+          })
+          .join("");
+
+        const keys = Object.keys(state.dailyLogs).sort().reverse().slice(0, 14);
+        document.getElementById("dailyHistoryList").innerHTML = keys.length
+          ? keys
+              .map((k) => {
+                const entry = state.dailyLogs[k];
+                return `
+                  <div class="history-row">
+                    <span>${k}</span>
+                    <strong>${formatNum(entry.count, state.numeralScript)} jap · ${formatNum(entry.malas, state.numeralScript)}x</strong>
+                  </div>`;
+              })
+              .join("")
+          : `<div class="modal-note">Start chanting to build your local daily log.</div>`;
+      }
+
+      function syncSettingsButtons() {
+        document.querySelectorAll("#countModeCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.mode === state.countMode);
+        });
+        document.querySelectorAll("#numeralCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.num === state.numeralScript);
+        });
+        document.querySelectorAll("#langCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.lang === state.lang);
+        });
+        document.querySelectorAll("#autoSpeedCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", parseInt(b.dataset.speed, 10) === state.autoSpeedMs);
+        });
+        document.querySelectorAll("#wakeLockCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", (b.dataset.wake === "on") === state.wakeLockEnabled);
+        });
+        document.querySelectorAll("#hapticCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", (b.dataset.haptic === "on") === state.hapticEnabled);
+        });
       }
 
       document.getElementById("btnChantMenu").addEventListener("click", () => {
@@ -1419,6 +1706,16 @@
       document.getElementById("btnTargetMenu").addEventListener("click", () => {
         populateModals();
         document.getElementById("targetModal").classList.remove("hidden");
+      });
+
+      document.getElementById("btnStatsMenu").addEventListener("click", () => {
+        populateStatsModal();
+        document.getElementById("statsModal").classList.remove("hidden");
+      });
+
+      document.getElementById("btnSettingsMenu").addEventListener("click", () => {
+        syncSettingsButtons();
+        document.getElementById("settingsModal").classList.remove("hidden");
       });
 
       document.querySelectorAll("[data-close]").forEach((btn) => {
@@ -1502,6 +1799,7 @@
         if (!isNaN(count) && count >= 1) {
           state.targetCount = count;
           state.currentCount = 0;
+          undoStack.length = 0;
           renderer.setTargetCount(count);
           updateUI();
           saveState();
@@ -1516,12 +1814,155 @@
         if (!isNaN(val) && val >= 1 && val <= 10008) {
           state.targetCount = val;
           state.currentCount = 0;
+          undoStack.length = 0;
           renderer.setTargetCount(val);
           updateUI();
           saveState();
           document.getElementById("targetModal").classList.add("hidden");
           showToast(`Mala Set to ${val} Beads + 1 Sumeru`);
         }
+      });
+
+      document.getElementById("sankalpaPresetCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.sankalpaMalas = parseInt(btn.dataset.sankalpa, 10) || 1;
+        populateModals();
+        updateUI();
+        saveState();
+        showToast(`Daily Sankalpa Set to ${state.sankalpaMalas} Malas`);
+      });
+
+      document.getElementById("countModeCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.countMode = btn.dataset.mode;
+        syncSettingsButtons();
+        updateUI();
+        saveState();
+      });
+
+      document.getElementById("numeralCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.numeralScript = btn.dataset.num;
+        syncSettingsButtons();
+        updateUI();
+        saveState();
+      });
+
+      document.getElementById("langCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.lang = btn.dataset.lang;
+        syncSettingsButtons();
+        updateUI();
+        saveState();
+      });
+
+      document.getElementById("autoSpeedCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.autoSpeedMs = parseInt(btn.dataset.speed, 10) || 1500;
+        if (autoJapTimer) {
+          clearInterval(autoJapTimer);
+          autoJapTimer = setInterval(() => triggerSingleBeadAdvance(), state.autoSpeedMs);
+        }
+        syncSettingsButtons();
+        updateUI();
+        saveState();
+      });
+
+      document.getElementById("wakeLockCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.wakeLockEnabled = btn.dataset.wake === "on";
+        syncWakeLock();
+        syncSettingsButtons();
+        saveState();
+      });
+
+      document.getElementById("hapticCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.hapticEnabled = btn.dataset.haptic === "on";
+        syncSettingsButtons();
+        saveState();
+      });
+
+      document.getElementById("btnResetCurrentMala").addEventListener("click", () => {
+        state.currentCount = 0;
+        undoStack.length = 0;
+        renderer.resetAll();
+        updateUI();
+        saveState();
+        document.getElementById("settingsModal").classList.add("hidden");
+        showToast("Current Mala Count Reset to 0");
+      });
+
+      document.getElementById("btnResetTodayOnly").addEventListener("click", () => {
+        const key = getTodayKey();
+        state.dailyLogs[key] = { count: 0, malas: 0, seconds: 0 };
+        state.currentCount = 0;
+        undoStack.length = 0;
+        renderer.resetAll();
+        updateUI();
+        saveState();
+        document.getElementById("settingsModal").classList.add("hidden");
+        showToast("Today's Log Cleared");
+      });
+
+      document.getElementById("btnExportJson").addEventListener("click", () => {
+        const payload = {
+          app: "Divya Jap",
+          exportedAt: new Date().toISOString(),
+          data: state
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `divya-jap-backup-${getTodayKey()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("Local JSON Backup Downloaded");
+      });
+
+      document.getElementById("btnImportJsonTrigger").addEventListener("click", () => {
+        document.getElementById("importJsonInput").click();
+      });
+
+      document.getElementById("importJsonInput").addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const parsed = JSON.parse(String(reader.result || "{}"));
+            const incoming = parsed.data && typeof parsed.data === "object" ? parsed.data : parsed;
+            if (typeof incoming.totalCount === "number") {
+              Object.assign(state, incoming);
+              renderer.setMaterial(state.material);
+              renderer.setTargetCount(state.targetCount);
+              renderer.currentCount = state.currentCount;
+              renderer.advanceOffset = state.currentCount;
+              renderer.targetAdvanceOffset = state.currentCount;
+              saveState();
+              updateUI();
+              syncSettingsButtons();
+              document.getElementById("settingsModal").classList.add("hidden");
+              showToast("Backup Restored Successfully");
+            } else {
+              showToast("Invalid Backup File");
+            }
+          } catch (_) {
+            showToast("Could not read backup file");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
       });
 
       renderer.resize();
@@ -1532,6 +1973,7 @@
       }
 
       updateUI();
+      syncWakeLock();
 
       let lastTime = performance.now();
       let lastFrame = 0;
