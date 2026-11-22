@@ -317,6 +317,20 @@
         }
 
         loadThreeDRudraksha() {
+          const CACHE_KEY = "divya_jap_rudraksha_3d_webp_v1";
+          try {
+            const cachedDataUrl = localStorage.getItem(CACHE_KEY);
+            if (cachedDataUrl && cachedDataUrl.startsWith("data:image/")) {
+              const img = new Image();
+              img.onload = () => {
+                this.beadSprites.rudraksha = img;
+                this.render();
+              };
+              img.src = cachedDataUrl;
+              return;
+            }
+          } catch (_) {}
+
           const build = () => {
             if (!window.THREE || this._threeDReady) return;
             this._threeDReady = true;
@@ -609,6 +623,12 @@
               spriteCtx.drawImage(gl.domElement, 0, 0);
               this.beadSprites.rudraksha = sprite;
               this.render();
+              try {
+                const webp = sprite.toDataURL("image/webp", 0.84);
+                if (webp && webp.length < 180000) {
+                  localStorage.setItem(CACHE_KEY, webp);
+                }
+              } catch (_) {}
 
               gl.dispose();
               geo.dispose();
@@ -672,31 +692,38 @@
           const cy = size / 2;
           const baseR = size * 0.415;
 
-          // Define the bead silhouette first, then clip every texture stroke to it.
-          // This keeps the sprite transparent outside the bead (no square tile).
-          c.save();
-          c.beginPath();
-          const steps = 144;
-          for (let i = 0; i <= steps; i++) {
-            const a = (i / steps) * Math.PI * 2;
-            let r = baseR;
-            if (material === "rudraksha") {
-              r += Math.cos(a * 5 + 0.25) * baseR * 0.022;
-              r += Math.sin(a * 11 + 0.8) * baseR * 0.009;
-              r *= 1 - 0.035 * Math.pow(Math.abs(Math.sin(a)), 4);
-            } else if (material === "tulsi") {
-              r *= 1 - 0.035 * Math.abs(Math.sin(a));
+          const traceSilhouette = () => {
+            c.beginPath();
+            const steps = 180;
+            for (let i = 0; i <= steps; i++) {
+              const a = (i / steps) * Math.PI * 2;
+              let r = baseR;
+              if (material === "rudraksha") {
+                // Organic, knobby 5-mukhi contour with natural wart-like edge protuberances
+                const mukhiLobes = Math.cos(a * 5 + 0.28) * baseR * 0.032;
+                const warts1 = Math.sin(a * 17 + 0.9) * baseR * 0.017;
+                const warts2 = Math.cos(a * 29 - 0.6) * baseR * 0.012;
+                const warts3 = Math.sin(a * 43 + 1.4) * baseR * 0.007;
+                r += mukhiLobes + warts1 + warts2 + warts3;
+                r *= 1 - 0.038 * Math.pow(Math.abs(Math.sin(a)), 4);
+              } else if (material === "tulsi") {
+                r *= 1 - 0.035 * Math.abs(Math.sin(a));
+              }
+              const px = cx + Math.cos(a) * r;
+              const py = cy + Math.sin(a) * r;
+              if (i === 0) c.moveTo(px, py);
+              else c.lineTo(px, py);
             }
-            const px = cx + Math.cos(a) * r;
-            const py = cy + Math.sin(a) * r;
-            if (i === 0) c.moveTo(px, py);
-            else c.lineTo(px, py);
-          }
-          c.closePath();
+            c.closePath();
+          };
+
+          c.save();
+          traceSilhouette();
           c.clip();
 
+          // Deeper, authentic dry Himalayan terracotta/maroon-brown palette for Rudraksha
           const palettes = {
-            rudraksha: ["#d58a58", "#a9532b", "#713016", "#2a1007"],
+            rudraksha: ["#b84d22", "#872c0e", "#4d1505", "#210702"],
             tulsi: ["#faebd4", "#d8b17b", "#a37843", "#63431e"],
             sphatik: ["#ffffff", "#eef9ff", "#a7d2e8", "#3e6980"],
             chandan: ["#f7d49e", "#cc8f46", "#8f5920", "#54300c"]
@@ -707,127 +734,132 @@
             cx, cy, baseR * 1.12
           );
           grad.addColorStop(0, colors[0]);
-          grad.addColorStop(0.34, colors[1]);
-          grad.addColorStop(0.72, colors[2]);
+          grad.addColorStop(0.36, colors[1]);
+          grad.addColorStop(0.74, colors[2]);
           grad.addColorStop(1, colors[3]);
           c.fillStyle = grad;
           c.fillRect(0, 0, size, size);
 
           if (material === "rudraksha") {
-            // Five authentic longitudinal mukhi divisions: raised rounded
-            // lobes separated by deep, irregular channels (not leaf/chevron lines).
-            for (let i = 0; i < 5; i++) {
-              const t = (i - 2) / 2;
-              const x = cx + t * baseR * 0.68;
-              const bow = (1 - Math.abs(t)) * baseR * 0.13;
-
-              if (i > 0) {
-                c.beginPath();
-                c.moveTo(x - 1, cy - baseR * 0.91);
-                c.bezierCurveTo(
-                  x - bow - 2, cy - baseR * 0.36,
-                  x + bow + 1, cy + baseR * 0.36,
-                  x - 1, cy + baseR * 0.91
-                );
-                c.strokeStyle = "rgba(31, 8, 2, 0.78)";
-                c.lineWidth = size * 0.021;
-                c.lineCap = "round";
-                c.stroke();
-
-                c.beginPath();
-                c.moveTo(x + size * 0.012, cy - baseR * 0.82);
-                c.bezierCurveTo(
-                  x + size * 0.012 - bow * 0.5, cy - baseR * 0.30,
-                  x + size * 0.012 + bow * 0.55, cy + baseR * 0.30,
-                  x + size * 0.012, cy + baseR * 0.82
-                );
-                c.strokeStyle = "rgba(239, 164, 109, 0.43)";
-                c.lineWidth = size * 0.009;
-                c.stroke();
-              }
-
-              // Soft raised lobe highlight on alternating faces.
-              c.beginPath();
-              c.moveTo(x - baseR * 0.055, cy - baseR * 0.78);
-              c.bezierCurveTo(
-                x - baseR * 0.10 - bow * 0.4, cy - baseR * 0.22,
-                x + baseR * 0.07 + bow * 0.4, cy + baseR * 0.28,
-                x - baseR * 0.025, cy + baseR * 0.78
-              );
-              c.strokeStyle = "rgba(245, 174, 119, 0.13)";
-              c.lineWidth = size * 0.045;
-              c.stroke();
-            }
-
-            // Pits and fine fibrous grain, individually distributed on the seed.
-            for (let p = 0; p < 260; p++) {
-              const rx = (this.hash2d(p, 1.3) * 2 - 1) * baseR * 0.84;
-              const ry = (this.hash2d(p, 7.9) * 2 - 1) * baseR * 0.84;
-              if (Math.hypot(rx, ry) > baseR * 0.84) continue;
-              const dotR = 0.45 + this.hash2d(p, 3.1) * 1.25;
-              c.beginPath();
-              c.arc(cx + rx, cy + ry, dotR, 0, Math.PI * 2);
-              c.fillStyle = this.hash2d(p, 5.7) > 0.5
-                ? "rgba(255, 190, 137, 0.20)"
-                : "rgba(24, 7, 2, 0.30)";
-              c.fill();
-            }
-
-            // Layered organic Rudraksha relief for the immediate first-paint sprite.
-            // The highlights and recessed shadows are clipped to the seed silhouette.
-            for (let w = 0; w < 92; w++) {
-              const a = this.hash2d(w, 31.7) * Math.PI * 2;
-              const rr = Math.sqrt(this.hash2d(w, 43.9)) * baseR * 0.76;
+            // 1. Dense, fused wart-like protuberances & dark recessed wart-grooves
+            //    Distributed in a natural phyllotaxis spiral so there are no flat/smooth patches.
+            const wartCount = 210;
+            for (let w = 0; w < wartCount; w++) {
+              const frac = (w + 0.5) / wartCount;
+              const rr = Math.sqrt(frac) * baseR * 0.88;
+              const a = w * 2.399963229728653 + (this.hash2d(w, 17.3) - 0.5) * 0.25;
               const wx = cx + Math.cos(a) * rr;
               const wy = cy + Math.sin(a) * rr;
-              const wr = 2.2 + this.hash2d(w, 57.1) * 7.2;
-              const warp = this.hash2d(w, 69.3) * 0.8 + 0.2;
-              const shade = c.createRadialGradient(wx - wr * 0.28, wy - wr * 0.34, wr * 0.08, wx, wy, wr);
-              shade.addColorStop(0, `rgba(224,145,91,${0.10 * warp})`);
-              shade.addColorStop(0.48, `rgba(93,34,13,${0.12 * warp})`);
-              shade.addColorStop(0.78, `rgba(27,7,2,${0.30 * warp})`);
-              shade.addColorStop(1, 'rgba(20,5,1,0)');
-              c.fillStyle = shade;
-              c.beginPath(); c.ellipse(wx, wy, wr * (0.72 + warp * 0.25), wr, a, 0, Math.PI * 2); c.fill();
+
+              // Spherical foreshortening near the edges
+              const edgeFactor = Math.max(0.45, Math.sqrt(Math.max(0, 1 - Math.pow(rr / (baseR * 1.02), 2))));
+              const wr = (3.4 + this.hash2d(w, 57.1) * 5.8) * edgeFactor;
+              const aspect = 0.68 + this.hash2d(w, 69.3) * 0.45;
+              const rot = this.hash2d(w, 83.7) * Math.PI;
+
+              // Deep dark groove/valley surrounding the base of each wart (bottom-right shadow)
+              c.save();
+              c.translate(wx + wr * 0.22, wy + wr * 0.26);
+              c.rotate(rot);
               c.beginPath();
-              c.ellipse(wx - wr * 0.13, wy - wr * 0.20, wr * 0.52, wr * 0.27, a, Math.PI * 1.05, Math.PI * 1.88);
-              c.strokeStyle = `rgba(244,174,119,${0.13 * warp})`;
-              c.lineWidth = Math.max(0.7, wr * 0.13); c.stroke();
+              c.ellipse(0, 0, wr * 1.15, wr * aspect * 1.15, 0, 0, Math.PI * 2);
+              c.fillStyle = "rgba(18, 4, 1, 0.52)";
+              c.fill();
+              c.restore();
+
+              // Raised dry woody wart crown with matte directional catchlight (top-left)
+              c.save();
+              c.translate(wx, wy);
+              c.rotate(rot);
+              const wGrad = c.createRadialGradient(
+                -wr * 0.28, -wr * 0.28 * aspect, wr * 0.08,
+                0, 0, wr * 1.05
+              );
+              // Lighten slightly on the upper-left lit hemisphere of the bead
+              const litBoost = Math.max(0.25, 1.0 - Math.hypot((wx - (cx - baseR * 0.3)) / baseR, (wy - (cy - baseR * 0.3)) / baseR) * 0.55);
+              wGrad.addColorStop(0, `rgba(208, 108, 60, ${0.42 * litBoost})`);
+              wGrad.addColorStop(0.50, `rgba(128, 44, 16, ${0.46 * litBoost})`);
+              wGrad.addColorStop(0.85, "rgba(42, 10, 3, 0.45)");
+              wGrad.addColorStop(1, "rgba(20, 4, 1, 0)");
+              c.fillStyle = wGrad;
+              c.beginPath();
+              c.ellipse(0, 0, wr, wr * aspect, 0, 0, Math.PI * 2);
+              c.fill();
+              c.restore();
             }
 
-            // Fine branching fissures and short weathered fibres, not regular stripes.
-            for (let k = 0; k < 44; k++) {
+            // 2. Irregular winding wart-valleys / micro-crevices weaving between protuberances
+            for (let k = 0; k < 75; k++) {
               const a = this.hash2d(k, 81.2) * Math.PI * 2;
-              const rr = Math.sqrt(this.hash2d(k, 92.4)) * baseR * 0.78;
+              const rr = Math.sqrt(this.hash2d(k, 92.4)) * baseR * 0.82;
               const sx = cx + Math.cos(a) * rr;
               const sy = cy + Math.sin(a) * rr;
-              const len = 5 + this.hash2d(k, 103.6) * 13;
-              c.beginPath(); c.moveTo(sx, sy);
-              c.quadraticCurveTo(sx + Math.cos(a + 0.7) * len * 0.45, sy + Math.sin(a + 0.7) * len * 0.45, sx + Math.cos(a + 0.18) * len, sy + Math.sin(a + 0.18) * len);
-              c.strokeStyle = k % 3 === 0 ? 'rgba(16,5,2,0.26)' : 'rgba(231,157,105,0.12)';
-              c.lineWidth = 0.55 + this.hash2d(k, 114.8) * 0.75; c.stroke();
-            }
-
-            // Small natural thread aperture at the top pole.
-            c.beginPath();
-            c.ellipse(cx, cy - baseR * 0.88, baseR * 0.105, baseR * 0.065, 0, 0, Math.PI * 2);
-            c.fillStyle = "rgba(20, 5, 1, 0.88)";
-            c.fill();
-            c.beginPath();
-            c.ellipse(cx - 1, cy - baseR * 0.90, baseR * 0.045, baseR * 0.025, 0, 0, Math.PI * 2);
-            c.fillStyle = "rgba(205, 112, 61, 0.35)";
-            c.fill();
-
-            // Scattered short wrinkles add the rough seed-like surface.
-            for (let row = -3; row <= 3; row++) {
-              const yy = cy + row * baseR * 0.22;
+              const len = 7 + this.hash2d(k, 103.6) * 16;
+              const bend = (this.hash2d(k, 119.1) - 0.5) * 1.4;
               c.beginPath();
-              c.moveTo(cx - baseR * 0.66, yy);
-              c.quadraticCurveTo(cx, yy + (row % 2 ? 2.2 : -2.2), cx + baseR * 0.66, yy - 1);
-              c.strokeStyle = "rgba(38, 10, 3, 0.16)";
-              c.lineWidth = size * 0.005;
+              c.moveTo(sx, sy);
+              c.quadraticCurveTo(
+                sx + Math.cos(a + bend) * len * 0.5,
+                sy + Math.sin(a + bend) * len * 0.5,
+                sx + Math.cos(a + bend * 0.35) * len,
+                sy + Math.sin(a + bend * 0.35) * len
+              );
+              c.strokeStyle = k % 4 === 0 ? "rgba(214, 122, 74, 0.16)" : "rgba(16, 4, 1, 0.44)";
+              c.lineWidth = 0.9 + this.hash2d(k, 114.8) * 1.1;
+              c.lineCap = "round";
               c.stroke();
             }
+
+            // 3. Deep, unsymmetrical, jagged winding 5-Mukhi longitudinal clefts
+            for (let i = 0; i < 5; i++) {
+              const t = (i - 2) / 2;
+              const baseX = cx + t * baseR * 0.68;
+              const bow = (1 - Math.abs(t)) * baseR * 0.14;
+              const segs = 18;
+
+              // Dark recessed cleft channel
+              c.beginPath();
+              for (let s = 0; s <= segs; s++) {
+                const f = s / segs; // 0 (top) to 1 (bottom)
+                const y = cy - baseR * 0.90 + f * baseR * 1.80;
+                const curve = Math.sin(f * Math.PI) * (i % 2 === 0 ? bow : -bow * 0.85);
+                const jag = (this.hash2d(i * 31 + s, 4.7) - 0.5) * (size * 0.022);
+                const x = baseX + curve + jag;
+                if (s === 0) c.moveTo(x, y);
+                else c.lineTo(x, y);
+              }
+              c.strokeStyle = "rgba(18, 4, 1, 0.86)";
+              c.lineWidth = size * 0.024;
+              c.lineCap = "round";
+              c.lineJoin = "round";
+              c.stroke();
+
+              // Broken raised woody ridge catchlight along one edge of the cleft
+              c.beginPath();
+              for (let s = 1; s < segs; s++) {
+                const f = s / segs;
+                const y = cy - baseR * 0.90 + f * baseR * 1.80;
+                const curve = Math.sin(f * Math.PI) * (i % 2 === 0 ? bow : -bow * 0.85);
+                const jag = (this.hash2d(i * 31 + s, 4.7) - 0.5) * (size * 0.022);
+                const x = baseX + curve + jag + size * 0.014;
+                if (s === 1) c.moveTo(x, y);
+                else c.lineTo(x, y);
+              }
+              c.strokeStyle = "rgba(218, 124, 72, 0.34)";
+              c.lineWidth = size * 0.008;
+              c.stroke();
+            }
+
+            // 4. Natural top thread aperture (dark bore + worn lip)
+            c.beginPath();
+            c.ellipse(cx, cy - baseR * 0.87, baseR * 0.11, baseR * 0.068, 0, 0, Math.PI * 2);
+            c.fillStyle = "rgba(14, 3, 1, 0.92)";
+            c.fill();
+            c.beginPath();
+            c.ellipse(cx - 1, cy - baseR * 0.89, baseR * 0.05, baseR * 0.028, 0, 0, Math.PI * 2);
+            c.fillStyle = "rgba(186, 94, 48, 0.32)";
+            c.fill();
+
           } else if (material === "tulsi") {
             c.strokeStyle = "rgba(95, 58, 22, 0.22)";
             c.lineWidth = 1.3;
@@ -852,42 +884,28 @@
             }
           }
 
-          // Spherical edge shading and a fine outline make every bead distinct.
+          // Spherical edge shading for natural 3D depth
           const rim = c.createRadialGradient(
-            cx - baseR * 0.18, cy - baseR * 0.18, baseR * 0.20,
+            cx - baseR * 0.18, cy - baseR * 0.18, baseR * 0.22,
             cx, cy, baseR * 1.02
           );
           rim.addColorStop(0, "rgba(0,0,0,0)");
-          rim.addColorStop(0.78, "rgba(0,0,0,0.08)");
-          rim.addColorStop(1, "rgba(0,0,0,0.38)");
+          rim.addColorStop(0.76, "rgba(0,0,0,0.12)");
+          rim.addColorStop(1, "rgba(0,0,0,0.48)");
           c.fillStyle = rim;
           c.fillRect(0, 0, size, size);
           c.restore();
 
-          c.save();
-          c.beginPath();
-          for (let i = 0; i <= steps; i++) {
-            const a = (i / steps) * Math.PI * 2;
-            let r = baseR;
-            if (material === "rudraksha") {
-              r += Math.cos(a * 5 + 0.25) * baseR * 0.022;
-              r += Math.sin(a * 11 + 0.8) * baseR * 0.009;
-              r *= 1 - 0.035 * Math.pow(Math.abs(Math.sin(a)), 4);
-            } else if (material === "tulsi") {
-              r *= 1 - 0.035 * Math.abs(Math.sin(a));
-            }
-            const px = cx + Math.cos(a) * r;
-            const py = cy + Math.sin(a) * r;
-            if (i === 0) c.moveTo(px, py);
-            else c.lineTo(px, py);
+          // Subtle outline only for smooth turned beads (no cartoon border on organic Rudraksha)
+          if (material !== "rudraksha") {
+            c.save();
+            traceSilhouette();
+            c.strokeStyle = "rgba(35, 18, 8, 0.38)";
+            c.lineWidth = size * 0.010;
+            c.stroke();
+            c.restore();
           }
-          c.closePath();
-          c.strokeStyle = material === "rudraksha"
-            ? "rgba(27, 8, 2, 0.82)"
-            : "rgba(35, 18, 8, 0.42)";
-          c.lineWidth = size * 0.012;
-          c.stroke();
-          c.restore();
+
           return off;
         }
 
