@@ -293,9 +293,11 @@
         }
 
         resize() {
-          const rect = this.canvas.parentElement.getBoundingClientRect();
-          this.width = Math.max(280, rect.width || window.innerWidth || 360);
-          this.height = Math.max(360, rect.height || window.innerHeight * 0.65 || 520);
+          const rect = this.canvas.parentElement ? this.canvas.parentElement.getBoundingClientRect() : { width: 0, height: 0 };
+          const vw = window.innerWidth || document.documentElement.clientWidth || 360;
+          const vh = window.innerHeight || document.documentElement.clientHeight || 640;
+          this.width = Math.max(280, rect.width > 10 ? rect.width : Math.min(520, vw - 28));
+          this.height = Math.max(360, rect.height > 10 ? rect.height : Math.round(vh * 0.64));
           this.dpr = Math.min(window.devicePixelRatio || 1, (navigator.connection?.saveData || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)) ? 1.25 : 1.75);
 
           this.canvas.width = Math.round(this.width * this.dpr);
@@ -603,6 +605,7 @@
               spriteCtx.drawImage(shadowCanvas, 178, 205, 284, 284);
               spriteCtx.drawImage(gl.domElement, 0, 0);
               this.beadSprites.rudraksha = sprite;
+              this.render();
 
               gl.dispose();
               geo.dispose();
@@ -1966,17 +1969,25 @@
       });
 
       renderer.resize();
-      if (typeof ResizeObserver !== "undefined") {
-        new ResizeObserver(() => renderer.resize()).observe(malaStage);
-      } else {
-        window.addEventListener("resize", () => renderer.resize());
-      }
-
       updateUI();
+      // Paint Frame 0 synchronously right now so the mala appears on the very first browser paint!
+      renderer.render();
       syncWakeLock();
 
+      if (typeof ResizeObserver !== "undefined") {
+        new ResizeObserver(() => {
+          renderer.resize();
+          renderer.render();
+        }).observe(malaStage);
+      } else {
+        window.addEventListener("resize", () => {
+          renderer.resize();
+          renderer.render();
+        });
+      }
+
       let lastTime = performance.now();
-      let lastFrame = 0;
+      let lastFrame = -100;
       function loop(now) {
         requestAnimationFrame(loop);
         if (document.hidden || now - lastFrame < 33) return;
