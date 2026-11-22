@@ -941,3 +941,233 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
+
+/* ==========================================================================
+   Sadhana Rank Tiers & Sangha Leaderboard
+   ========================================================================== */
+.tab-strip.two-col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.stats-tab-btn {
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stats-tab-btn.active {
+  background: var(--accent-saffron);
+  color: #ffffff;
+}
+
+.stats-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rank-banner-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(234, 120, 40, 0.16), rgba(240, 184, 101, 0.06));
+  border: 1px solid var(--border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rank-banner-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rank-pill-badge {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent-gold);
+}
+
+.rank-next-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-progress-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+}
+
+.rank-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-saffron), var(--accent-gold));
+  transition: width 0.25s ease;
+}
+
+.ranking-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rank-motivation-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  font-size: 12.5px;
+}
+
+.lb-row.is-me {
+  border-color: var(--accent-saffron);
+  background: rgba(234, 120, 40, 0.16);
+  box-shadow: 0 0 12px rgba(234, 120, 40, 0.16);
+}
+
+.lb-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.lb-rank {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.lb-rank.top-1 { background: #e6a82e; color: #1f1005; }
+.lb-rank.top-2 { background: #c4ccd4; color: #161b22; }
+.lb-rank.top-3 { background: #c87d4b; color: #1f1005; }
+
+.lb-name-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.lb-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lb-tier {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.lb-score {
+  font-family: var(--font-serif);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ranking-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.share-rank-btn {
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: rgba(234, 120, 40, 0.16);
+  color: var(--accent-gold);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.share-rank-btn:active {
+  transform: scale(0.95);
+}
+
+.lb-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lb-friend-badge {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(234, 120, 40, 0.22);
+  color: var(--accent-gold);
+  vertical-align: middle;
+}
+
+.lb-remove-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lb-remove-btn:hover {
+  color: #e05252;
+  border-color: rgba(224, 82, 82, 0.45);
+}

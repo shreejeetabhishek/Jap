@@ -66,6 +66,8 @@
           <span class="telemetry-chip">⚡ <strong id="sessionPaceVal">0</strong>/min</span>
           <span>•</span>
           <span class="telemetry-chip" id="sankalpaChip">🎯 <strong id="sankalpaProgressVal">0/3</strong></span>
+          <span>•</span>
+          <span class="telemetry-chip" id="liveRankChip">🏆 <strong id="liveRankVal">#—</strong></span>
         </div>
 
         <div id="chalisaControls" class="chalisa-bar hidden">
@@ -207,44 +209,89 @@
     </div>
   </div>
 
-  <!-- Sadhana Analytics, 7-Day Chart & History Modal -->
+  <!-- Sadhana Analytics, 7-Day Chart & User Ranking Modal -->
   <div id="statsModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="statsModalHeading">
     <div class="modal-sheet tall">
       <div class="modal-header">
-        <h2 id="statsModalHeading">Sadhana Insights (100% Local)</h2>
+        <h2 id="statsModalHeading">Sadhana Insights & Ranking</h2>
         <button class="modal-close" data-close="statsModal" type="button" aria-label="Close">✕</button>
       </div>
 
-      <div class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-label">Today's Jap</div>
-          <div class="kpi-val" id="kpiTodayCount">0</div>
+      <div class="tab-strip two-col" role="tablist">
+        <button class="stats-tab-btn active" data-statstab="insights" role="tab" type="button">Insights</button>
+        <button class="stats-tab-btn" data-statstab="ranking" role="tab" type="button">🏆 Ranking</button>
+      </div>
+
+      <!-- Insights Panel -->
+      <div id="statsPanelInsights" class="stats-panel">
+        <div class="rank-banner-card" id="rankBannerCard">
+          <div class="rank-banner-top">
+            <span class="rank-pill-badge" id="userTierBadge">🪔 ARAMBHAK</span>
+            <span class="rank-next-label" id="userNextTierLabel">108 jap to Sadhak</span>
+          </div>
+          <div class="rank-progress-track">
+            <div class="rank-progress-fill" id="userTierProgressFill" style="width: 0%"></div>
+          </div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Lifetime Jap</div>
-          <div class="kpi-val" id="kpiLifetimeCount">0</div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Today's Jap</div>
+            <div class="kpi-val" id="kpiTodayCount">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Lifetime Jap</div>
+            <div class="kpi-val" id="kpiLifetimeCount">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Current Streak</div>
+            <div class="kpi-val" id="kpiStreak">0 Days</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Malas Completed</div>
+            <div class="kpi-val" id="kpiMalas">0</div>
+          </div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Current Streak</div>
-          <div class="kpi-val" id="kpiStreak">0 Days</div>
+
+        <div class="chart-box">
+          <div class="chart-title">
+            <span>Last 7 Days Practice</span>
+            <span id="chartBestDay">Best: 0</span>
+          </div>
+          <div id="sevenDayChart" class="bar-chart"></div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Malas Completed</div>
-          <div class="kpi-val" id="kpiMalas">0</div>
+
+        <div>
+          <div class="chart-title"><span>Daily History Log</span></div>
+          <div id="dailyHistoryList" class="history-list"></div>
         </div>
       </div>
 
-      <div class="chart-box">
-        <div class="chart-title">
-          <span>Last 7 Days Practice</span>
-          <span id="chartBestDay">Best: 0</span>
-        </div>
-        <div id="sevenDayChart" class="bar-chart"></div>
-      </div>
+      <!-- Ranking / Sangha Leaderboard Panel -->
+      <div id="statsPanelRanking" class="stats-panel hidden">
+        <form id="sadhakNameForm" class="custom-target-row">
+          <input id="sadhakNameInput" class="form-input" type="text" maxlength="24" placeholder="Your Sadhak Name (e.g., Arjun)" />
+          <button class="primary-action-btn compact" type="submit">Save</button>
+        </form>
 
-      <div>
-        <div class="chart-title"><span>Daily History Log</span></div>
-        <div id="dailyHistoryList" class="history-list"></div>
+        <div class="ranking-header-row">
+          <div class="segmented-ctrl" id="rankScopeCtrl">
+            <button class="seg-btn active" data-scope="today" type="button">Today</button>
+            <button class="seg-btn" data-scope="alltime" type="button">All-Time</button>
+          </div>
+          <div class="segmented-ctrl" id="rankGroupCtrl">
+            <button class="seg-btn active" data-group="sangha" type="button">All</button>
+            <button class="seg-btn" data-group="circle" type="button">Circle</button>
+          </div>
+        </div>
+
+        <div class="ranking-status-strip">
+          <span class="rank-motivation-tag" id="rankMotivationTag">Rank #—</span>
+          <button id="btnShareRank" class="share-rank-btn" type="button">📤 Share My Rank</button>
+        </div>
+
+        <div id="leaderboardList" class="leaderboard-list"></div>
+        <p class="modal-note">100% free & offline. Share your rank link with friends or family—opening a link adds them to your local ranking circle automatically.</p>
       </div>
     </div>
   </div>

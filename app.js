@@ -1167,8 +1167,123 @@
         lang: "en",
         autoSpeedMs: 1500,
         theme: "dark",
+        sadhakName: "You (Sadhak)",
+        rankScope: "today",
+        rankGroup: "sangha",
+        friends: [],
         dailyLogs: {}
       };
+
+      const SADHANA_TIERS = [
+        { min: 0, name: "Arambhak", icon: "🪔" },
+        { min: 108, name: "Sadhak", icon: "📿" },
+        { min: 1080, name: "Nishthavan", icon: "🪷" },
+        { min: 5400, name: "Bhakt", icon: "🔥" },
+        { min: 10800, name: "Tapasvi", icon: "✨" },
+        { min: 54000, name: "Siddha", icon: "🕉️" },
+        { min: 108000, name: "Mahasadhak", icon: "👑" }
+      ];
+
+      const SANGHA_BENCHMARKS = [
+        { name: "Aarav Sharma", todayMax: 1080, alltime: 42120, seed: 11 },
+        { name: "Meera Devi", todayMax: 756, alltime: 28404, seed: 23 },
+        { name: "Raghavendra", todayMax: 540, alltime: 19872, seed: 37 },
+        { name: "Ananya Das", todayMax: 432, alltime: 14580, seed: 49 },
+        { name: "Prakash Ji", todayMax: 324, alltime: 9720, seed: 61 },
+        { name: "Sita Ram", todayMax: 216, alltime: 5400, seed: 73 },
+        { name: "Kavita Nair", todayMax: 108, alltime: 2160, seed: 89 },
+        { name: "Devendra", todayMax: 54, alltime: 864, seed: 97 },
+        { name: "Neha Verma", todayMax: 27, alltime: 324, seed: 109 }
+      ];
+
+      function escapeHtml(str) {
+        return String(str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      // Deterministic daily + time-of-day factor so local Sangha feels naturally alive through the day
+      function getDailyBenchmarkScore(bench) {
+        const now = new Date();
+        const daySeed = now.getFullYear() * 372 + (now.getMonth() + 1) * 31 + now.getDate();
+        const wave = Math.sin((daySeed + bench.seed) * 12.9898) * 43758.5453;
+        const dailyVariance = 0.85 + (wave - Math.floor(wave)) * 0.30; // 0.85x - 1.15x
+        const hourFloat = now.getHours() + now.getMinutes() / 60;
+        // Smooth progress from 5:00 AM (18%) to 10:00 PM (100%)
+        const dayProgress = Math.max(0.18, Math.min(1, (hourFloat - 4.5) / 17.5));
+        return Math.max(9, Math.round(bench.todayMax * dailyVariance * dayProgress));
+      }
+
+      function getUserTierInfo(totalJap) {
+        let current = SADHANA_TIERS[0];
+        let next = SADHANA_TIERS[1];
+        for (let i = 0; i < SADHANA_TIERS.length; i++) {
+          if (totalJap >= SADHANA_TIERS[i].min) {
+            current = SADHANA_TIERS[i];
+            next = SADHANA_TIERS[i + 1] || null;
+          }
+        }
+        const pct = next
+          ? Math.min(100, Math.round(((totalJap - current.min) / Math.max(1, next.min - current.min)) * 100))
+          : 100;
+        return { current, next, pct };
+      }
+
+      function buildRankedBoard(scope, group = "sangha") {
+        const todayKey = getTodayKey();
+        const todayLog = ensureTodayLog();
+        const myScore = scope === "today" ? todayLog.count : state.totalCount;
+        const rows = [];
+
+        if (group !== "circle") {
+          SANGHA_BENCHMARKS.forEach((b) => {
+            const dynToday = getDailyBenchmarkScore(b);
+            rows.push({
+              id: "bench_" + b.seed,
+              name: b.name,
+              score: scope === "today" ? dynToday : (b.alltime + dynToday),
+              tier: getUserTierInfo(b.alltime).current.name,
+              isMe: false,
+              isFriend: false
+            });
+          });
+        }
+
+        if (Array.isArray(state.friends)) {
+          state.friends.forEach((f) => {
+            const fToday = f.date === todayKey ? (Number(f.today) || 0) : 0;
+            const fTotal = Number(f.total) || 0;
+            rows.push({
+              id: f.id,
+              name: f.name || "Friend",
+              score: scope === "today" ? fToday : fTotal,
+              tier: getUserTierInfo(fTotal).current.name,
+              isMe: false,
+              isFriend: true
+            });
+          });
+        }
+
+        rows.push({
+          id: "me",
+          name: state.sadhakName || "You (Sadhak)",
+          score: myScore,
+          tier: getUserTierInfo(state.totalCount).current.name,
+          isMe: true,
+          isFriend: false
+        });
+
+        rows.sort((a, b) => (b.score - a.score) || (a.isMe ? -1 : 1));
+        return rows;
+      }
+
+      function getCurrentTodayRank() {
+        const rows = buildRankedBoard("today", state.rankGroup || "sangha");
+        const idx = rows.findIndex((r) => r.isMe);
+        return idx >= 0 ? idx + 1 : 1;
+      }
 
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
@@ -1176,6 +1291,39 @@
           Object.assign(state, saved);
           if (!state.dailyLogs || typeof state.dailyLogs !== "object") {
             state.dailyLogs = {};
+          }
+          if (!Array.isArray(state.friends)) {
+            state.friends = [];
+          }
+        }
+      } catch (_) {}
+
+      // Import a real friend's shared score link (?sadhak=Name&today=108&total=540&date=YYYY-MM-DD)
+      let importedFriendName = "";
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const sharedName = (params.get("sadhak") || "").trim().slice(0, 24);
+        const sharedTotal = parseInt(params.get("total") || "", 10);
+        const sharedToday = parseInt(params.get("today") || "0", 10);
+        const sharedDate = (params.get("date") || getTodayKey()).slice(0, 10);
+        if (sharedName && !isNaN(sharedTotal) && sharedTotal >= 0) {
+          const fid = "fr_" + sharedName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+          const existingIdx = state.friends.findIndex((f) => f.id === fid);
+          const entry = {
+            id: fid,
+            name: sharedName,
+            today: Math.max(0, isNaN(sharedToday) ? 0 : sharedToday),
+            total: Math.max(0, sharedTotal),
+            date: sharedDate
+          };
+          if (existingIdx >= 0) {
+            state.friends[existingIdx] = entry;
+          } else {
+            state.friends.push(entry);
+          }
+          importedFriendName = sharedName;
+          if (window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
           }
         }
       } catch (_) {}
@@ -1326,6 +1474,10 @@
           ? Math.round((todayLog.count / Math.max(1, todayLog.seconds)) * 60)
           : 0;
         document.getElementById("sessionPaceVal").textContent = formatNum(pace, state.numeralScript);
+        const liveRankEl = document.getElementById("liveRankVal");
+        if (liveRankEl) {
+          liveRankEl.textContent = `#${formatNum(getCurrentTodayRank(), state.numeralScript)}`;
+        }
 
         const pct = Math.min(100, (state.currentCount / Math.max(1, state.targetCount)) * 100);
         malaProgressFill.style.width = `${pct}%`;
@@ -1376,6 +1528,7 @@
       function triggerSingleBeadAdvance() {
         lastActivityTimestamp = Date.now();
         syncWakeLock();
+        const prevTodayRank = getCurrentTodayRank();
 
         const todayLog = ensureTodayLog();
         undoStack.push({
@@ -1421,6 +1574,10 @@
         } else {
           SacredAudio.playBeadClick(state.material);
           if (state.hapticEnabled && navigator.vibrate) navigator.vibrate(14);
+          const newTodayRank = getCurrentTodayRank();
+          if (newTodayRank < prevTodayRank) {
+            showToast(`🏆 Rank Up! You reached #${formatNum(newTodayRank, state.numeralScript)} Today`);
+          }
         }
 
         updateUI();
@@ -1677,6 +1834,85 @@
               })
               .join("")
           : `<div class="modal-note">Start chanting to build your local daily log.</div>`;
+
+        // Tier Banner
+        const tierInfo = getUserTierInfo(state.totalCount);
+        document.getElementById("userTierBadge").textContent = `${tierInfo.current.icon} ${tierInfo.current.name.toUpperCase()}`;
+        document.getElementById("userNextTierLabel").textContent = tierInfo.next
+          ? `${formatNum(Math.max(0, tierInfo.next.min - state.totalCount), state.numeralScript)} jap to ${tierInfo.next.name}`
+          : "Highest Tier Reached";
+        document.getElementById("userTierProgressFill").style.width = `${tierInfo.pct}%`;
+
+        // Ranking / Leaderboard
+        renderLeaderboard();
+      }
+
+      function renderLeaderboard() {
+        const nameInput = document.getElementById("sadhakNameInput");
+        if (nameInput && document.activeElement !== nameInput) {
+          nameInput.value = state.sadhakName || "";
+        }
+        document.querySelectorAll("#rankScopeCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.scope === state.rankScope);
+        });
+        document.querySelectorAll("#rankGroupCtrl .seg-btn").forEach((b) => {
+          b.classList.toggle("active", b.dataset.group === (state.rankGroup || "sangha"));
+        });
+
+        const rows = buildRankedBoard(state.rankScope, state.rankGroup || "sangha");
+        const myIndex = rows.findIndex((r) => r.isMe);
+        const myRank = myIndex + 1;
+        const above = myIndex > 0 ? rows[myIndex - 1] : null;
+        const myScore = rows[myIndex] ? rows[myIndex].score : 0;
+
+        const motivEl = document.getElementById("rankMotivationTag");
+        if (above) {
+          const gap = Math.max(1, above.score - myScore + 1);
+          motivEl.textContent = `Rank #${formatNum(myRank, state.numeralScript)} • ${formatNum(gap, state.numeralScript)} to #${formatNum(myRank - 1, state.numeralScript)}`;
+        } else {
+          motivEl.textContent = `🏆 Rank #${formatNum(1, state.numeralScript)} Leader!`;
+        }
+
+        const listEl = document.getElementById("leaderboardList");
+        if (state.rankGroup === "circle" && rows.length <= 1) {
+          listEl.innerHTML = rows.map((row) => `
+            <div class="lb-row is-me">
+              <div class="lb-left">
+                <span class="lb-rank top-1">${formatNum(1, state.numeralScript)}</span>
+                <div class="lb-name-wrap">
+                  <span class="lb-name">${escapeHtml(row.name)}</span>
+                  <span class="lb-tier">${row.tier}</span>
+                </div>
+              </div>
+              <span class="lb-score">${formatNum(row.score, state.numeralScript)} jap</span>
+            </div>`).join("") + `<p class="modal-note">Tap "Share My Rank" and send your link to friends or family to build your private local circle.</p>`;
+          return;
+        }
+
+        listEl.innerHTML = rows
+          .map((row, idx) => {
+            const rankNum = idx + 1;
+            const topCls = rankNum === 1 ? "top-1" : rankNum === 2 ? "top-2" : rankNum === 3 ? "top-3" : "";
+            const friendTag = row.isFriend ? `<span class="lb-friend-badge">👥 Friend</span>` : "";
+            const removeBtn = row.isFriend
+              ? `<button class="lb-remove-btn" data-remove-friend="${escapeHtml(row.id)}" type="button" title="Remove from Circle">✕</button>`
+              : "";
+            return `
+              <div class="lb-row ${row.isMe ? "is-me" : ""}">
+                <div class="lb-left">
+                  <span class="lb-rank ${topCls}">${formatNum(rankNum, state.numeralScript)}</span>
+                  <div class="lb-name-wrap">
+                    <span class="lb-name">${escapeHtml(row.name)}${friendTag}</span>
+                    <span class="lb-tier">${row.tier}</span>
+                  </div>
+                </div>
+                <div class="lb-right">
+                  <span class="lb-score">${formatNum(row.score, state.numeralScript)} jap</span>
+                  ${removeBtn}
+                </div>
+              </div>`;
+          })
+          .join("");
       }
 
       function syncSettingsButtons() {
@@ -1713,6 +1949,76 @@
       document.getElementById("btnStatsMenu").addEventListener("click", () => {
         populateStatsModal();
         document.getElementById("statsModal").classList.remove("hidden");
+      });
+
+      document.querySelectorAll(".stats-tab-btn").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".stats-tab-btn").forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          const target = tab.dataset.statstab;
+          document.getElementById("statsPanelInsights").classList.toggle("hidden", target !== "insights");
+          document.getElementById("statsPanelRanking").classList.toggle("hidden", target !== "ranking");
+          if (target === "ranking") renderLeaderboard();
+        });
+      });
+
+      document.getElementById("rankScopeCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.rankScope = btn.dataset.scope;
+        saveState();
+        renderLeaderboard();
+      });
+
+      document.getElementById("rankGroupCtrl").addEventListener("click", (e) => {
+        const btn = e.target.closest(".seg-btn");
+        if (!btn) return;
+        state.rankGroup = btn.dataset.group;
+        saveState();
+        updateUI();
+        renderLeaderboard();
+      });
+
+      document.getElementById("sadhakNameForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const val = document.getElementById("sadhakNameInput").value.trim();
+        state.sadhakName = val || "You (Sadhak)";
+        saveState();
+        renderLeaderboard();
+        showToast(`Sadhak Name Updated: ${state.sadhakName}`);
+      });
+
+      document.getElementById("btnShareRank").addEventListener("click", async () => {
+        const todayLog = ensureTodayLog();
+        const base = window.location.origin && window.location.origin !== "null"
+          ? `${window.location.origin}${window.location.pathname}`
+          : "https://divyajap.app/";
+        const shareUrl = `${base}?sadhak=${encodeURIComponent(state.sadhakName || "Sadhak")}&today=${todayLog.count}&total=${state.totalCount}&date=${getTodayKey()}`;
+        const shareText = `🙏 ${state.sadhakName || "Sadhak"} has chanted ${todayLog.count} jap today (${state.totalCount} total) on Divya Jap! Open to compare our ranks:`;
+
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: "Divya Jap — My Sadhana Rank", text: shareText, url: shareUrl });
+            return;
+          } catch (_) {}
+        }
+        try {
+          await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+          showToast("Rank Challenge Link Copied!");
+        } catch (_) {
+          showToast("Link Ready: " + shareUrl.slice(0, 42) + "...");
+        }
+      });
+
+      document.getElementById("leaderboardList").addEventListener("click", (e) => {
+        const rem = e.target.closest("[data-remove-friend]");
+        if (!rem) return;
+        const fid = rem.dataset.removeFriend;
+        state.friends = (state.friends || []).filter((f) => f.id !== fid);
+        saveState();
+        updateUI();
+        renderLeaderboard();
+        showToast("Removed from Circle");
       });
 
       document.getElementById("btnSettingsMenu").addEventListener("click", () => {
@@ -1972,6 +2278,10 @@
       // Paint Frame 0 synchronously right now so the mala appears on the very first browser paint!
       renderer.render();
       syncWakeLock();
+      if (importedFriendName) {
+        saveState();
+        showToast(`👥 Added ${importedFriendName} to your Ranking Circle!`);
+      }
 
       if (typeof ResizeObserver !== "undefined") {
         new ResizeObserver(() => {

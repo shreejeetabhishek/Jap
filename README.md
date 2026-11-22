@@ -34,3 +34,6 @@ This build adds a small Sri Aurobindo & The Mother (Mirra Alfassa) selection: �
 - **Sadhana Insights & 7-Day Chart**: Local-only daily logs, streak tracking, and 7-day bar visualization.
 - **Count Up / Countdown, Devanagari (`१२३`) Numerals & Hindi/English UI**: Switch numeral script, counter direction, interface language, haptic vibration, and Screen Wake Lock.
 - **Free Local JSON Backup**: Export and restore your full practice data locally as `.json` without any cloud paywall.
+
+- **Sadhana Ranks & Sangha Leaderboard**: Spiritual tier progression (*Arambhak → Sadhak → Nishthavan → Bhakt → Tapasvi → Siddha → Mahasadhak*) plus an interactive Today / All-Time local Sangha ranking board with editable Sadhak Name.
+- **Zero-Backend Friend Circle & Live Rank-Up**: Dynamic time-of-day Sangha benchmarks, live `#Rank` telemetry chip, automatic Rank-Up toast celebrations, and `Share My Rank` URLs that let friends/family join your local ranking circle for free.
