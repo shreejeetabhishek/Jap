@@ -281,6 +281,10 @@
           this.advanceOffset = 0;
           this.targetAdvanceOffset = 0;
           this.dragPull = 0;
+          this.beadLift = 0;
+          this.beadLiftVel = 0;
+          this.isTouching = false;
+          this.touchLiftCurrent = 0;
           this.swayAngle = 0;
           this.swayVelocity = 0;
           this.targetTiltX = 0;
@@ -901,6 +905,9 @@
         advanceOneBead() {
           this.currentCount += 1;
           this.targetAdvanceOffset += 1;
+          // Slide the main counting bead smoothly upward on every tap or upward slide
+          this.beadLift = Math.max(this.beadLift, 26);
+          this.beadLiftVel = 165;
           this.swayVelocity += (Math.random() - 0.5) * 0.018;
           this.tasselVelocity += 0.035;
           return this.currentCount >= this.targetCount;
@@ -937,15 +944,16 @@
         getLoopDimensions() {
           const n = this.targetCount;
           const centerX = this.width * 0.5;
-          const primaryR = Math.min(35, Math.max(29, this.width * 0.084));
-          let beadBaseR = primaryR * 0.48;
+          // Much larger main counting bead for effortless readability (elderly-friendly)
+          const primaryR = Math.min(54, Math.max(44, this.width * 0.135));
+          let beadBaseR = Math.min(22, Math.max(17, this.width * 0.048));
 
-          if (n <= 13) beadBaseR = primaryR * 0.54;
-          else if (n > 108) beadBaseR = primaryR * 0.43;
+          if (n <= 13) beadBaseR *= 1.12;
+          else if (n > 108) beadBaseR *= 0.90;
 
-          const centerY = Math.max(primaryR * 3.4, this.height * 0.34);
-          const topY = Math.max(primaryR * 1.25, centerY - primaryR * 2.35);
-          const bottomY = Math.min(this.height - 48, centerY + this.height * 0.53);
+          const centerY = Math.max(primaryR * 1.95, this.height * 0.31);
+          const topY = Math.max(primaryR * 0.85, centerY - primaryR * 1.35);
+          const bottomY = Math.min(this.height - 42, centerY + this.height * 0.57);
           const halfWidthX = beadBaseR * 0.34;
 
           return {
@@ -976,6 +984,21 @@
           const tasselAccel = -20 * (this.tasselAngle - this.swayAngle * 1.45);
           this.tasselVelocity = (this.tasselVelocity + tasselAccel * dt) * 0.88;
           this.tasselAngle += this.tasselVelocity * dt;
+
+          // Smooth spring return for the main bead's upward slide motion
+          const liftSpring = -110 * this.beadLift - 16 * this.beadLiftVel;
+          this.beadLiftVel += liftSpring * dt;
+          this.beadLift += this.beadLiftVel * dt;
+          if (this.beadLift < 0) {
+            this.beadLift = 0;
+            this.beadLiftVel = 0;
+          } else if (this.beadLift > 44) {
+            this.beadLift = 44;
+            this.beadLiftVel = Math.min(0, this.beadLiftVel);
+          }
+
+          const targetTouch = this.isTouching ? 1 : 0;
+          this.touchLiftCurrent += (targetTouch - this.touchLiftCurrent) * Math.min(1, dt * 18);
         }
 
         drawSilkenTassel(ctx, x, y, scale, angle) {
@@ -1025,7 +1048,7 @@
           // Keep the physical loop for bead travel, but render only the lower
           // hanging run. The unwanted upper return arch is hidden behind the
           // counting position instead of changing the mala's geometry.
-          const upperCutY = dims.centerY - dims.primaryR * 0.42;
+          const upperCutY = dims.centerY;
           const spanY = Math.max(120, dims.bottomY - dims.topY);
           const cosCut = Math.max(-1, Math.min(1, 1 - 2 * (upperCutY - dims.topY) / spanY));
           const uCut = Math.acos(cosCut) / (Math.PI * 2);
@@ -1091,18 +1114,20 @@
           // painted over by the numbered bead while leaving beads visible above
           // and below it.
           const cx = dims.centerX + this.swayAngle * 10;
-          const cy = dims.centerY - pullFraction * 16;
+          const totalLift = pullFraction * 38 + this.beadLift + this.touchLiftCurrent * 8;
+          const cy = dims.centerY - totalLift;
           const pr = dims.primaryR;
 
           for (const item of items) {
             // Remove only beads on the short upper return section above the
             // numbered counting bead. Keep the lower strand, Guru bead and
             // moving jhalar untouched.
-            if (item.y < dims.centerY - dims.primaryR * 0.42) continue;
+            if (item.y < dims.centerY - dims.primaryR * 0.35) continue;
             const r = (item.isGuru ? dims.beadBaseR * 1.36 : dims.beadBaseR) * item.scale;
             const dx = item.x - cx;
-            const dy = item.y - cy;
-            if (Math.hypot(dx, dy) < pr + r * 0.48) continue;
+            const dy = item.y - dims.centerY;
+            // Tight clear-zone seats the hanging strand flush against the main bead (no thread gap)
+            if (Math.hypot(dx, dy) < pr * 0.88 + r * 0.20) continue;
 
             if (item.isGuru) {
               this.drawSilkenTassel(ctx, item.x, item.y + r * 0.80, item.scale, this.tasselAngle - this.swayAngle);
@@ -1113,28 +1138,25 @@
 
           ctx.restore();
 
-          // Numbered counting bead sits within the continuous hanging strand.
-
-
-
+          // Large, elderly-friendly numbered counting bead that slides up when touched or upslid
           ctx.drawImage(sprite, cx - pr, cy - pr, pr * 2, pr * 2);
 
           const rawVal = this.countMode === "down"
             ? Math.max(0, this.targetCount - this.currentCount)
             : this.currentCount;
           const displayCount = formatNum(rawVal, this.numeralScript);
-          const fontSize = displayCount.length >= 4 ? pr * 0.50 : displayCount.length === 3 ? pr * 0.60 : pr * 0.72;
+          const fontSize = displayCount.length >= 4 ? pr * 0.56 : displayCount.length === 3 ? pr * 0.70 : pr * 0.88;
           ctx.save();
-          ctx.font = `700 ${Math.round(fontSize)}px "Cinzel", "Playfair Display", Georgia, serif`;
+          ctx.font = `800 ${Math.round(fontSize)}px "Cinzel", "Playfair Display", Georgia, serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-          ctx.shadowOffsetX = 0;
-          ctx.shadowOffsetY = 0;
+          ctx.lineJoin = "round";
 
           const isLightBead = this.material === "sphatik" || this.material === "tulsi";
-          ctx.fillStyle = isLightBead ? "#1e1005" : "#fff9f0";
+          ctx.lineWidth = Math.max(2, pr * 0.065);
+          ctx.strokeStyle = isLightBead ? "rgba(255, 250, 240, 0.72)" : "rgba(18, 6, 2, 0.72)";
+          ctx.strokeText(displayCount, cx, cy + 1);
+          ctx.fillStyle = isLightBead ? "#1a0c03" : "#fffaf2";
           ctx.fillText(displayCount, cx, cy + 1);
           ctx.restore();
         }
@@ -1641,6 +1663,7 @@
         startY = e.clientY;
         hasTriggeredInGesture = false;
         renderer.dragPull = 0;
+        renderer.isTouching = true;
         SacredAudio.ensureContext();
       });
 
@@ -1676,6 +1699,7 @@
         pointerActive = false;
         hasTriggeredInGesture = false;
         renderer.dragPull = 0;
+        renderer.isTouching = false;
       }
 
       window.addEventListener("pointerup", endPointerGesture);
