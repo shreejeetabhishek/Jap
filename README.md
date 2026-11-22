@@ -44,5 +44,3 @@ This build adds a small Sri Aurobindo & The Mother (Mirra Alfassa) selection: â€
 - **Photorealistic Embedded Tulsi Sprite**: Added an instant, zero-network embedded WebP sprite of the real Tulsi bead with natural wood grain and top bore.
 - **Photorealistic Embedded Chandan Sprite**: Added an instant, zero-network embedded WebP sprite of the real Chandan (sandalwood) bead with natural swirling wood grain.
 - **Photorealistic Embedded Sphatik Sprite**: Added an instant, zero-network embedded WebP sprite of the real Sphatik (clear quartz crystal) bead with natural internal crystal inclusions and vertical bore.
-- **Consistent Visual Slide-Up on Touch & Upslide**: Enhanced main counting bead lift response and spring dynamics so the bead visually slides upward every time on touch or upward slide.
-- **Smooth Zero-Bounce Slide-Up**: Tuned the main counting bead lift spring to critical damping so it slides smoothly upward on each touch/upslide without bouncing.

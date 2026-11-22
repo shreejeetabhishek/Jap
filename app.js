@@ -609,8 +609,8 @@
         advanceOneBead() {
           this.currentCount += 1;
           this.targetAdvanceOffset += 1;
-          // Smooth upward slide on every bead advance (critically damped so no double-bounce)
-          this.beadLift = Math.max(this.beadLift, 28);
+          // Slide the main counting bead smoothly upward on every tap or upward slide
+          this.beadLift = Math.max(this.beadLift, 26);
           this.beadLiftVel = 165;
           this.swayVelocity += (Math.random() - 0.5) * 0.018;
           // Smooth vertical silk spring bounce on slide-up/tap + subtle gentle sway
@@ -743,16 +743,16 @@
           // Subtle elastic silk-strand length stretch coupled to vertical spring bounce
           this.tasselStretch = Math.max(-0.08, Math.min(0.14, this.tasselBounceY * 0.016));
 
-          // Critically damped upward slide (zero bounce): glides smoothly up & settles cleanly
-          const liftAccel = -165 * this.beadLift - 26 * this.beadLiftVel;
-          this.beadLiftVel += liftAccel * dt;
+          // Smooth spring return for the main bead's upward slide motion
+          const liftSpring = -110 * this.beadLift - 16 * this.beadLiftVel;
+          this.beadLiftVel += liftSpring * dt;
           this.beadLift += this.beadLiftVel * dt;
-          if (this.beadLift < 0.05) {
+          if (this.beadLift < 0) {
             this.beadLift = 0;
             this.beadLiftVel = 0;
-          } else if (this.beadLift > 46) {
-            this.beadLift = 46;
-            if (this.beadLiftVel > 0) this.beadLiftVel = 0;
+          } else if (this.beadLift > 44) {
+            this.beadLift = 44;
+            this.beadLiftVel = Math.min(0, this.beadLiftVel);
           }
 
           const targetTouch = this.isTouching ? 1 : 0;
@@ -932,9 +932,7 @@
           // painted over by the numbered bead while leaving beads visible above
           // and below it.
           const cx = dims.centerX + this.swayAngle * 10;
-          const rawLift = pullFraction * 44 + this.beadLift + this.touchLiftCurrent * 16;
-          const maxSafeLift = Math.max(24, dims.centerY - dims.primaryR * 1.05);
-          const totalLift = Math.min(maxSafeLift, rawLift);
+          const totalLift = pullFraction * 38 + this.beadLift + this.touchLiftCurrent * 8;
           const cy = dims.centerY - totalLift;
           const pr = dims.primaryR;
 
@@ -1484,8 +1482,6 @@
         hasTriggeredInGesture = false;
         renderer.dragPull = 0;
         renderer.isTouching = true;
-        renderer.beadLift = Math.max(renderer.beadLift, 16);
-        renderer.beadLiftVel = Math.max(renderer.beadLiftVel, 110);
         renderer.tasselBounceVel -= 26;
         renderer.tasselVelocity += (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.14);
         renderer.silkEnergyTarget = Math.min(0.55, renderer.silkEnergyTarget + 0.30);
